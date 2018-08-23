@@ -2,12 +2,17 @@ package com.jscheng.scamera.view;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Point;
 import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
+import android.util.Size;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +32,6 @@ public class CameraFragment extends Fragment implements VideoProgressButton.List
     private final static int CAMERA_REQUEST_CODE = 1;
     private TextureView mCameraView;
     private VideoProgressButton mProgressBtn;
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -36,6 +40,17 @@ public class CameraFragment extends Fragment implements VideoProgressButton.List
         mProgressBtn = contentView.findViewById(R.id.progress_btn);
         mProgressBtn.setListener(this);
         mCameraView.setSurfaceTextureListener(this);
+        mCameraView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    Log.e(TAG, "onTouch: "+event.getX() + " , " + event.getY());
+                    cameraFocus((int)event.getX(), (int)event.getY());
+                    return true;
+                }
+                return false;
+            }
+        });
         return contentView;
     }
 
@@ -57,12 +72,12 @@ public class CameraFragment extends Fragment implements VideoProgressButton.List
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int width, int height) {
-
+        cameraFocus(width/2, height/2);
     }
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
-        CameraUtil.releaseCamera();
+        releasePreview();
         return false;
     }
 
@@ -74,20 +89,26 @@ public class CameraFragment extends Fragment implements VideoProgressButton.List
     public void startPreview() {
         if (requestCameraPermission()) {
             if (CameraUtil.getCamera() == null) {
-                CameraUtil.openCamera(getActivity());
+                CameraUtil.openCamera();
             }
-            CameraUtil.startPreview(mCameraView.getSurfaceTexture());
+            CameraUtil.startPreview(getActivity(), mCameraView.getSurfaceTexture(), mCameraView.getWidth(), mCameraView.getHeight());
         }
+    }
+
+    public void releasePreview() {
+        CameraUtil.releaseCamera();
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        releasePreview();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        startPreview();
     }
 
     @Override
@@ -125,5 +146,16 @@ public class CameraFragment extends Fragment implements VideoProgressButton.List
                 PermisstionUtil.showPermissionAlterDialog(getContext(), "获取相机权限被拒绝");
             }
         }
+    }
+
+    private void cameraFocus(int x, int y) {
+        Point focusPoint = new Point(x, y);
+        Size cameraSize = new Size(mCameraView.getWidth(), mCameraView.getHeight());
+        Camera.AutoFocusCallback focusCallback = new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean b, Camera camera) {
+            }
+        };
+        CameraUtil.newCameraFocus(focusPoint, cameraSize, focusCallback);
     }
 }
