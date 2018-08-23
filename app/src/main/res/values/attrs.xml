@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="video_progress_button">
+        <attr name="circle_line" format="color"></attr>
+        <attr name="circle" format="color"></attr>
+    </declare-styleable>
+</resources>
