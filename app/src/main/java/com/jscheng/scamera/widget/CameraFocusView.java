@@ -49,7 +49,7 @@ public class CameraFocusView extends View {
         this.finishColor = typedArray.getColor(R.styleable.camera_focus_view_finish_color, Color.YELLOW);
         this.mPaint = new Paint();
         this.mPaintColor = prepareColor;
-        this.mDuration = 500;
+        this.mDuration = 600;
         this.mDurationHandler = new Handler(Looper.getMainLooper());
         this.setVisibility(GONE);
     }
@@ -82,7 +82,10 @@ public class CameraFocusView extends View {
             setVisibility(GONE);
         }
     }
-
+    public void cancelFocus() {
+        isFocusing = false;
+        setVisibility(GONE);
+    }
     public void setDuration(int duration) {
         mDuration = duration;
     }
@@ -94,13 +97,16 @@ public class CameraFocusView extends View {
         int height = getMeasuredHeight();
         mPaint.setStrokeWidth(mStrokeWidth);
         mPaint.setAntiAlias(true);
-        mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setColor(mPaintColor);
-        canvas.drawRect(0, 0, width, height, mPaint);
         mPaint.setStyle(Paint.Style.FILL);
-        canvas.drawLine(width/2, 0, width/2, height/15, mPaint);
-        canvas.drawLine(width/2, height-height/15, width/2, height, mPaint);
-        canvas.drawLine(0, height/2, width/15, height/2, mPaint);
-        canvas.drawLine(width-width/15, height/2, width, height/2, mPaint);
+        canvas.drawLine(0, 0, width/3, 0, mPaint);
+        canvas.drawLine(width*2/3, 0, width, 0, mPaint);
+        canvas.drawLine(0, height, width/3, height, mPaint);
+        canvas.drawLine(width*2/3, height, width, height, mPaint);
+
+        canvas.drawLine(0, 0, 0, height/3, mPaint);
+        canvas.drawLine(0, height*2/3, 0, height, mPaint);
+        canvas.drawLine(width, 0, width, height/3, mPaint);
+        canvas.drawLine(width, height*2/3, width, height, mPaint);
     }
 }

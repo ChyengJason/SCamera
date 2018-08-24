@@ -9,51 +9,72 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.RelativeLayout;
-
 import com.jscheng.scamera.R;
 import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
 import com.jscheng.scamera.widget.CameraFocusView;
 import com.jscheng.scamera.widget.CameraProgressButton;
-
-import java.util.List;
+import com.jscheng.scamera.widget.CameraSwitchView;
 
 /**
  * Created By Chengjunsen on 2018/8/22
  */
-public class CameraFragment extends Fragment implements CameraProgressButton.Listener, TextureView.SurfaceTextureListener{
+public class CameraFragment extends Fragment implements CameraProgressButton.Listener, TextureView.SurfaceTextureListener, CameraSensor.CameraSensorListener{
     private final static String TAG = CameraFragment.class.getSimpleName();
     private final static int CAMERA_REQUEST_CODE = 1;
+    private final static int STORE_REQUEST_CODE = 2;
+
     private TextureView mCameraView;
+    private CameraSensor mCameraSensor;
     private CameraProgressButton mProgressBtn;
     private CameraFocusView mFocusView;
-    @Nullable
+    private CameraSwitchView mSwitchView;
+    // 是否正在对焦
+    private boolean isFocusing;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View contentView = inflater.inflate(R.layout.fragment_camera, container, false);
+        initView(contentView);
+        return contentView;
+    }
+
+    private void initView(View contentView) {
+        isFocusing = false;
+
         mCameraView = contentView.findViewById(R.id.camera_view);
         mProgressBtn = contentView.findViewById(R.id.progress_btn);
         mFocusView = contentView.findViewById(R.id.focus_view);
+        mSwitchView = contentView.findViewById(R.id.switch_view);
+
+        mCameraSensor = new CameraSensor(getContext());
+        mCameraSensor.setCameraSensorListener(this);
         mCameraView.setSurfaceTextureListener(this);
+        mProgressBtn.setProgressListener(this);
+
         mCameraView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    cameraFocus((int)event.getX(), (int)event.getY(), false);
+                    focus((int)event.getX(), (int)event.getY(), false);
                     return true;
                 }
                 return false;
             }
         });
-        return contentView;
+        mSwitchView.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                mFocusView.cancelFocus();
+                CameraUtil.switchCamera(getActivity(), !CameraUtil.isBackCamera(), mCameraView.getSurfaceTexture());
+            }
+        });
     }
 
     @Override
@@ -74,7 +95,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int width, int height) {
-        cameraFocus(width/2, height/2, true);
+        focus(width/2, height/2, true);
     }
 
     @Override
@@ -93,12 +114,16 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             if (CameraUtil.getCamera() == null) {
                 CameraUtil.openCamera();
             }
-            CameraUtil.startPreview(getActivity(), mCameraView.getSurfaceTexture(), mCameraView.getWidth(), mCameraView.getHeight());
+            CameraUtil.startPreview(getActivity(), mCameraView.getSurfaceTexture());
+            mCameraSensor.start();
+            mSwitchView.setOrientation(mCameraSensor.getX(), mCameraSensor.getY(), mCameraSensor.getZ());
         }
     }
 
     public void releasePreview() {
         CameraUtil.releaseCamera();
+        mCameraSensor.stop();
+        mFocusView.cancelFocus();
     }
 
     @Override
@@ -115,10 +140,12 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onShortPress() {
+
     }
 
     @Override
     public void onStartLongPress() {
+
     }
 
     @Override
@@ -129,17 +156,44 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     public void onEndMaxProgress() {
     }
 
-    public boolean requestCameraPermission() {
-        List<String> notGrantPermissions = PermisstionUtil.isPermissionsAllGranted(getContext(), PermisstionUtil.CAMERA);
-        if(notGrantPermissions.isEmpty()){
-          return true;
+    private boolean requestCameraPermission() {
+        return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.CAMERA, CAMERA_REQUEST_CODE, "请求相机权限被拒绝");
+    }
+
+    private boolean requestStoragePermission() {
+        return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.STORAGE, STORE_REQUEST_CODE, "请求访问SD卡权限被拒绝");
+    }
+
+    private void focus(final int x, final int y, final boolean isAutoFocus) {
+        if (!CameraUtil.isBackCamera()) {
+            return;
         }
-        if (PermisstionUtil.judgePermission(getContext(), PermisstionUtil.CAMERA)) {
-            PermisstionUtil.showPermissionAlterDialog(getContext(), "请求相机权限被拒绝");
-        } else {
-            PermisstionUtil.requestPermissions(getContext(), PermisstionUtil.CAMERA, CAMERA_REQUEST_CODE);
+        if (isFocusing && isAutoFocus) {
+            return;
         }
-        return false;
+        isFocusing = true;
+        Point focusPoint = new Point(x, y);
+        Size screenSize = new Size(mCameraView.getWidth(), mCameraView.getHeight());
+        if (!isAutoFocus) {
+            mFocusView.beginFocus(x, y);
+        }
+        CameraUtil.newCameraFocus(focusPoint, screenSize, new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean success, Camera camera) {
+                isFocusing = false;
+                if (!isAutoFocus) {
+                    mFocusView.endFocus(success);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onRock() {
+        if (CameraUtil.isBackCamera() && CameraUtil.getCamera() != null) {
+            focus(mCameraView.getWidth() / 2, mCameraView.getHeight() / 2, true);
+        }
+        mSwitchView.setOrientation(mCameraSensor.getX(), mCameraSensor.getY(), mCameraSensor.getZ());
     }
 
     @Override
@@ -148,19 +202,5 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         if (requestCode == CAMERA_REQUEST_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startPreview();
         }
-    }
-
-    private void cameraFocus(final int x, final int y, final boolean isAutoFocus) {
-        Point focusPoint = new Point(x, y);
-        Size cameraSize = new Size(mCameraView.getWidth(), mCameraView.getHeight());
-        mFocusView.beginFocus(x, y);
-        CameraUtil.newCameraFocus(focusPoint, cameraSize, new Camera.AutoFocusCallback() {
-            @Override
-            public void onAutoFocus(boolean success, Camera camera) {
-                if (!isAutoFocus) {
-                        mFocusView.endFocus(success);
-                }
-            }
-        });
     }
 }

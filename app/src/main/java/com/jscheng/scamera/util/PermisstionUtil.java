@@ -95,6 +95,48 @@ public class PermisstionUtil {
         return false;
     }
 
+    /**
+     * 请求权限
+     * @param context
+     * @param permission
+     * @param requestCode
+     */
+    public static void requestPermission(Context context, String permission, int requestCode) {
+        ActivityCompat.requestPermissions((Activity) context, new String[]{permission}, requestCode);
+    }
+
+    /**
+     * 请求多个权限
+     * @param context
+     * @param permissions
+     * @param requestCode
+     */
+    public static void requestPermissions(Context context, String[] permissions, int requestCode) {
+        ActivityCompat.requestPermissions((Activity) context, permissions, requestCode);
+    }
+
+
+    /**
+     * 检查权限 - 申请权限 - 被拒绝则打开对话窗口
+     * @param context
+     * @param permissions
+     * @param requestCode
+     * @param hint
+     * @return
+     */
+    public static boolean checkPermissionsAndRequest(Context context, String[] permissions, int requestCode, String hint) {
+        List<String> notGrantPermissions = PermisstionUtil.isPermissionsAllGranted(context, permissions);
+        if(notGrantPermissions.isEmpty()){
+            return true;
+        }
+        if (PermisstionUtil.judgePermission(context, permissions)) {
+            PermisstionUtil.showPermissionAlterDialog(context, hint);
+        } else {
+            PermisstionUtil.requestPermissions(context, PermisstionUtil.CAMERA, requestCode);
+        }
+        return false;
+    }
+
     public static void showPermissionAlterDialog(final Context context, String hint) {
         new AlertDialog.Builder(context)
                 .setTitle("提示")
@@ -121,27 +163,6 @@ public class PermisstionUtil {
                     }
                 }).create().show();
     }
-
-    /**
-     * 请求权限
-     * @param context
-     * @param permission
-     * @param requestCode
-     */
-    public static void requestPermission(Context context, String permission, int requestCode) {
-        ActivityCompat.requestPermissions((Activity) context, new String[]{permission}, requestCode);
-    }
-
-    /**
-     * 请求多个权限
-     * @param context
-     * @param permissions
-     * @param requestCode
-     */
-    public static void requestPermissions(Context context, String[] permissions, int requestCode) {
-        ActivityCompat.requestPermissions((Activity) context, permissions, requestCode);
-    }
-
     static {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             CALENDAR = new String[]{};

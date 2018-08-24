@@ -4,6 +4,7 @@ package com.jscheng.scamera.util;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.ImageFormat;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
@@ -16,6 +17,7 @@ import android.view.SurfaceHolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -26,7 +28,6 @@ public class CameraUtil {
     private static Camera mCamera = null;
     private static int mCameraID = Camera.CameraInfo.CAMERA_FACING_BACK;
     private static int mOrientation = 0;
-    private static boolean isFocusing = false;
 
     private boolean checkCameraHardware(Context context) {
         if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
@@ -37,7 +38,7 @@ public class CameraUtil {
     }
 
     public static void openCamera() {
-        mCamera = Camera.open();
+        mCamera = Camera.open(mCameraID);
         if (mCamera == null) {
             throw new RuntimeException("Unable to open camera");
         }
@@ -45,38 +46,6 @@ public class CameraUtil {
 
     public static Camera getCamera() {
         return mCamera;
-    }
-
-    public static void startPreview(Activity activity, SurfaceHolder surfaceHolder, int width, int height) {
-        try {
-            if (mCamera != null) {
-                mCamera.setPreviewDisplay(surfaceHolder);
-                startPreview(activity, width, height);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void startPreview(Activity activity, SurfaceTexture surfaceTexture, int width, int height) {
-        try {
-            if (mCamera != null) {
-                mCamera.setPreviewTexture(surfaceTexture);
-                startPreview(activity, width, height);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void startPreview(Activity activity, int width, int height) {
-        if (mCamera != null) {
-            mOrientation = getCameraPreviewOrientation(activity, mCameraID);
-            mCamera.setDisplayOrientation(mOrientation);
-            Camera.Size bestSize = getPreviewOptimalSize(width, height);
-            mCamera.getParameters().setPreviewSize(bestSize.width, bestSize.height);
-            mCamera.startPreview();
-        }
     }
 
     public static void releaseCamera() {
@@ -87,27 +56,76 @@ public class CameraUtil {
         }
     }
 
-    public static Camera.Size getPreviewOptimalSize(int width, int height) {
-        if (mCamera == null) {
-            throw new RuntimeException("mCamera is null");
+    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceTexture texture) {
+        if (mCamera != null) {
+            releaseCamera();
+            mCameraID = isBackCamera ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
+            openCamera();
+            startPreview(activity, texture);
         }
-        return getOptimalSize(mCamera.getParameters().getSupportedPictureSizes(), width, height);
     }
 
-    public static Camera.Size getOptimalSize(List<Camera.Size> supportSizes, int width, int height) {
-        if (mCamera == null) {
-            throw new RuntimeException("mCamera is null");
+    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceHolder surfaceHolder) {
+        if (mCamera != null) {
+            releaseCamera();
+            mCameraID = isBackCamera ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
+            openCamera();
+            startPreview(activity, surfaceHolder);
         }
-        Camera.Size bestSize = supportSizes.get(0);
-        int largestArea = bestSize.width * bestSize.height;
-        for (Camera.Size s : supportSizes) {
-            int area = s.width * s.height;
-            if (area > largestArea) {
-                bestSize = s;
-                largestArea = area;
+    }
+
+    public static boolean isBackCamera() {
+        return mCameraID == Camera.CameraInfo.CAMERA_FACING_BACK;
+    }
+
+    public static void startPreview(Activity activity, SurfaceHolder surfaceHolder) {
+        try {
+            if (mCamera != null) {
+                mCamera.setPreviewDisplay(surfaceHolder);
+                startPreview(activity);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void startPreview(Activity activity, SurfaceTexture surfaceTexture) {
+        try {
+            if (mCamera != null) {
+                mCamera.setPreviewTexture(surfaceTexture);
+                startPreview(activity);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void startPreview(Activity activity) {
+        if (mCamera != null) {
+            Camera.Parameters parameters = mCamera.getParameters();
+            mOrientation = getCameraPreviewOrientation(activity, mCameraID);
+            Size bestSize = getOptimalSize(parameters.getSupportedPreviewSizes());
+            parameters.setPreviewSize(bestSize.getWidth(), bestSize.getHeight());
+            //parameters.setPictureSize(bestSize.getWidth(), bestSize.getHeight());
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+            mCamera.setParameters(parameters);
+            mCamera.setDisplayOrientation(mOrientation);
+            mCamera.startPreview();
+        }
+    }
+
+    private static Size getOptimalSize(List<Camera.Size> supportList) {
+        int width = 0;
+        int height = 0;
+        Iterator<Camera.Size> itor = supportList.iterator();
+        while (itor.hasNext()) {
+            Camera.Size cur = itor.next();
+            if (cur.width >= width && cur.height >= height) {
+                width = cur.width;
+                height = cur.height;
             }
         }
-        return bestSize;
+        return new Size(width, height);
     }
 
     public static int getCameraPreviewOrientation(Activity activity, int cameraId) {
@@ -130,13 +148,12 @@ public class CameraUtil {
         return result;
     }
 
-    public static boolean newCameraFocus(Point focusPoint, Size cameraSize, Camera.AutoFocusCallback callback) {
+    public static boolean newCameraFocus(Point focusPoint, Size screenSize, Camera.AutoFocusCallback callback) {
         if (mCamera == null) {
             throw new RuntimeException("mCamera is null");
         }
-        Point cameraFoucusPoint = convertToCameraPoint(cameraSize, focusPoint);
+        Point cameraFoucusPoint = convertToCameraPoint(screenSize, focusPoint);
         Rect cameraFoucusRect = convertToCameraRect(cameraFoucusPoint, 100);
-        Log.e(TAG, "newCameraFocus: x: " + cameraFoucusRect.centerX() + ", y: " + cameraFoucusRect.centerY());
         Camera.Parameters parameters = mCamera.getParameters();
         if (Build.VERSION.SDK_INT > 14) {
             if (parameters.getMaxNumFocusAreas() <= 0) {
@@ -187,13 +204,13 @@ public class CameraUtil {
 
     /**
      * 将屏幕坐标转换成camera坐标
-     * @param cameraViewSize
+     * @param screenSize
      * @param focusPoint
      * @return cameraPoint
      */
-    private static Point convertToCameraPoint(Size cameraViewSize, Point focusPoint){
-        int newX = focusPoint.y * 2000/cameraViewSize.getHeight() - 1000;
-        int newY = -focusPoint.x * 2000/cameraViewSize.getWidth() + 1000;
+    private static Point convertToCameraPoint(Size screenSize, Point focusPoint){
+        int newX = focusPoint.y * 2000/screenSize.getHeight() - 1000;
+        int newY = -focusPoint.x * 2000/screenSize.getWidth() + 1000;
         return new Point(newX, newY);
     }
 
@@ -206,12 +223,12 @@ public class CameraUtil {
     }
 
     private static int limit(int s, int max, int min) {
-        if (s > max) return max;
-        if (s < min) return min;
+        if (s > max) { return max; }
+        if (s < min) { return min; }
         return s;
     }
 
-    private static int getRotation(Activity activity) {
+    public static int getRotation(Activity activity) {
         int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
         int degrees = 0;
         switch (rotation) {

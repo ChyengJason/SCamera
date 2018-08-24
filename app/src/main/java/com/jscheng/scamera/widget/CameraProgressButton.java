@@ -136,7 +136,7 @@ public class CameraProgressButton extends View{
         void onEndMaxProgress();
     }
 
-    public void setListener(Listener mListener) {
+    public void setProgressListener(Listener mListener) {
         this.mListener = mListener;
     }
 
@@ -144,6 +144,7 @@ public class CameraProgressButton extends View{
         public static final int ACTION_DOWN = 1;
         public static final int ACTION_UP = 2;
         public static final int SCHEDULE_PRESSING = 3;
+        public int LONG_PRESS_DURATION = 300;
         public int EACH_DURATION = 100;
 
         private boolean isPress = false;
@@ -157,7 +158,7 @@ public class CameraProgressButton extends View{
                 case ACTION_DOWN:
                     if (!isPress) {
                         isPress = true;
-                        sendEmptyMessageDelayed(SCHEDULE_PRESSING, EACH_DURATION);
+                        sendEmptyMessageDelayed(SCHEDULE_PRESSING, LONG_PRESS_DURATION);
                     }
                     break;
                 case ACTION_UP:
