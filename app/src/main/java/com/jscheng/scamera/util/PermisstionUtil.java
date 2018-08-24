@@ -1,12 +1,14 @@
 package com.jscheng.scamera.util;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.widget.Toast;
 import java.util.ArrayList;
@@ -26,7 +28,12 @@ public class PermisstionUtil {
     public static final String[] SMS;
     public static final String[] STORAGE;
 
-    //单个权限请求检测
+    /**
+     * 单个权限请求检测
+     * @param context
+     * @param permissionName
+     * @return
+     */
     public static boolean isPermissionGranted(Context context, String permissionName) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return true;
@@ -39,7 +46,12 @@ public class PermisstionUtil {
         return true;
     }
 
-    //多个权限请求检测，返回list,如果list.size为空说明权限全部有了不需要请求，否则请求没有的
+    /**
+     * 多个权限请求检测，返回list,如果list.size为空说明权限全部有了不需要请求，否则请求没有的
+     * @param context
+     * @param permArray
+     * @return
+     */
     public static List<String> isPermissionsAllGranted(Context context, String[] permArray) {
         List<String> list = new ArrayList<>();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
@@ -52,6 +64,35 @@ public class PermisstionUtil {
             }
         }
         return list;
+    }
+
+    /**
+     * 判断是否已拒绝过权限
+     * @param context
+     * @param permission
+     * @return
+     */
+    public static boolean judgePermission(Context context, String permission) {
+        if (ActivityCompat.shouldShowRequestPermissionRationale((Activity) context, permission)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * 判断是否已拒绝过权限
+     * @param context
+     * @param permissions
+     * @return
+     */
+    public static boolean judgePermission(Context context, String[] permissions) {
+        for (String permission : permissions) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale((Activity) context, permission)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void showPermissionAlterDialog(final Context context, String hint) {
@@ -79,6 +120,26 @@ public class PermisstionUtil {
                         dialog.dismiss();
                     }
                 }).create().show();
+    }
+
+    /**
+     * 请求权限
+     * @param context
+     * @param permission
+     * @param requestCode
+     */
+    public static void requestPermission(Context context, String permission, int requestCode) {
+        ActivityCompat.requestPermissions((Activity) context, new String[]{permission}, requestCode);
+    }
+
+    /**
+     * 请求多个权限
+     * @param context
+     * @param permissions
+     * @param requestCode
+     */
+    public static void requestPermissions(Context context, String[] permissions, int requestCode) {
+        ActivityCompat.requestPermissions((Activity) context, permissions, requestCode);
     }
 
     static {

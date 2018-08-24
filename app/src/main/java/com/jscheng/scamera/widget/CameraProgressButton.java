@@ -19,8 +19,8 @@ import com.jscheng.scamera.R;
 /**
  * Created By Chengjunsen on 2018/8/22
  */
-public class VideoProgressButton extends View{
-    private static final String TAG = VideoProgressButton.class.getSimpleName();
+public class CameraProgressButton extends View{
+    private static final String TAG = CameraProgressButton.class.getSimpleName();
     private int mMaxProgress = 10000; // 默认10s
     private Paint mBgPaint;
     private Paint mStrokePaint;
@@ -31,20 +31,20 @@ public class VideoProgressButton extends View{
     private Handler mTouchHandler;
     private Listener mListener;
 
-    public VideoProgressButton(Context context) {
+    public CameraProgressButton(Context context) {
         super(context);
         init(context, null);
     }
 
-    public VideoProgressButton(Context context, @Nullable AttributeSet attrs) {
+    public CameraProgressButton(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init(context, attrs);
     }
 
     private void init(Context context,@Nullable AttributeSet attrs) {
-        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.video_progress_button);
-        mCircleColor = typedArray.getColor(R.styleable.video_progress_button_circle, Color.RED);
-        mCircleLineColor = typedArray.getColor(R.styleable.video_progress_button_circle_line, Color.BLACK);
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.camera_progress_button);
+        mCircleColor = typedArray.getColor(R.styleable.camera_progress_button_circle, Color.RED);
+        mCircleLineColor = typedArray.getColor(R.styleable.camera_progress_button_circle_line, Color.BLACK);
 
         mStrokePaint = new Paint();
         mBgPaint = new Paint();

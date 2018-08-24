@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/camera_fragment_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:video_progress_button="http://schemas.android.com/apk/res-auto">
+    xmlns:camera_progress_button="http://schemas.android.com/apk/res-auto">
     <TextureView
         android:id="@+id/camera_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.jscheng.scamera.widget.VideoProgressButton
+    <com.jscheng.scamera.widget.CameraProgressButton
         android:id="@+id/progress_btn"
         android:layout_width="100dp"
         android:layout_height="100dp"
-        video_progress_button:circle_line="@color/colorPrimary"
-        video_progress_button:circle="@color/colorAccent"
+        camera_progress_button:circle_line="@color/colorPrimary"
+        camera_progress_button:circle="@color/colorAccent"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true" />
+
+    <com.jscheng.scamera.widget.CameraFocusView
+        android:id="@+id/focus_view"
+        android:layout_width="50dp"
+        android:layout_height="50dp" />
 </RelativeLayout>
