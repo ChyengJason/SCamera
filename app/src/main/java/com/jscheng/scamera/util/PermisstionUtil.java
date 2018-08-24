@@ -117,7 +117,8 @@ public class PermisstionUtil {
 
 
     /**
-     * 检查权限 - 申请权限 - 被拒绝则打开对话窗口
+     * 申请权限复合接口
+     * 检查权限 -> 申请权限 -> 被拒绝则打开对话窗口
      * @param context
      * @param permissions
      * @param requestCode
@@ -132,7 +133,7 @@ public class PermisstionUtil {
         if (PermisstionUtil.judgePermission(context, permissions)) {
             PermisstionUtil.showPermissionAlterDialog(context, hint);
         } else {
-            PermisstionUtil.requestPermissions(context, PermisstionUtil.CAMERA, requestCode);
+            PermisstionUtil.requestPermissions(context, permissions, requestCode);
         }
         return false;
     }

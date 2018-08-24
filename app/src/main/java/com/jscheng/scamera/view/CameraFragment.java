@@ -37,6 +37,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private CameraSwitchView mSwitchView;
     // 是否正在对焦
     private boolean isFocusing;
+    private Size mPreviewSize = null;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -72,7 +73,13 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             @Override
             public void onClick(View view) {
                 mFocusView.cancelFocus();
-                CameraUtil.switchCamera(getActivity(), !CameraUtil.isBackCamera(), mCameraView.getSurfaceTexture());
+                if (mPreviewSize != null) {
+                    CameraUtil.switchCamera(getActivity(),
+                            !CameraUtil.isBackCamera(),
+                            mCameraView.getSurfaceTexture(),
+                            mPreviewSize.getWidth(),
+                            mPreviewSize.getHeight());
+                }
             }
         });
     }
@@ -90,6 +97,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
+        mPreviewSize = new Size(width, height);
         startPreview();
     }
 
@@ -114,9 +122,11 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             if (CameraUtil.getCamera() == null) {
                 CameraUtil.openCamera();
             }
-            CameraUtil.startPreview(getActivity(), mCameraView.getSurfaceTexture());
-            mCameraSensor.start();
-            mSwitchView.setOrientation(mCameraSensor.getX(), mCameraSensor.getY(), mCameraSensor.getZ());
+            if (mPreviewSize != null) {
+                CameraUtil.startPreview(getActivity(), mCameraView.getSurfaceTexture(), mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                mCameraSensor.start();
+                mSwitchView.setOrientation(mCameraSensor.getX(), mCameraSensor.getY(), mCameraSensor.getZ());
+            }
         }
     }
 
@@ -140,12 +150,16 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onShortPress() {
+        if (requestStoragePermission()) {
 
+        }
     }
 
     @Override
     public void onStartLongPress() {
+        if (requestStoragePermission()) {
 
+        }
     }
 
     @Override

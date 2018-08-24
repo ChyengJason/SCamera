@@ -49,7 +49,7 @@ public class CameraFocusView extends View {
         this.finishColor = typedArray.getColor(R.styleable.camera_focus_view_finish_color, Color.YELLOW);
         this.mPaint = new Paint();
         this.mPaintColor = prepareColor;
-        this.mDuration = 600;
+        this.mDuration = 1000;
         this.mDurationHandler = new Handler(Looper.getMainLooper());
         this.setVisibility(GONE);
     }

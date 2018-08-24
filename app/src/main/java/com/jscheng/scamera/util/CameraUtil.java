@@ -17,6 +17,8 @@ import android.view.SurfaceHolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -56,21 +58,21 @@ public class CameraUtil {
         }
     }
 
-    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceTexture texture) {
+    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceTexture texture, int width, int height) {
         if (mCamera != null) {
             releaseCamera();
             mCameraID = isBackCamera ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
             openCamera();
-            startPreview(activity, texture);
+            startPreview(activity, texture, width, height);
         }
     }
 
-    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceHolder surfaceHolder) {
+    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceHolder surfaceHolder, int width, int height) {
         if (mCamera != null) {
             releaseCamera();
             mCameraID = isBackCamera ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
             openCamera();
-            startPreview(activity, surfaceHolder);
+            startPreview(activity, surfaceHolder, width, height);
         }
     }
 
@@ -78,35 +80,36 @@ public class CameraUtil {
         return mCameraID == Camera.CameraInfo.CAMERA_FACING_BACK;
     }
 
-    public static void startPreview(Activity activity, SurfaceHolder surfaceHolder) {
+    public static void startPreview(Activity activity, SurfaceHolder surfaceHolder, int width, int height) {
         try {
             if (mCamera != null) {
                 mCamera.setPreviewDisplay(surfaceHolder);
-                startPreview(activity);
+                startPreview(activity, width, height);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void startPreview(Activity activity, SurfaceTexture surfaceTexture) {
+    public static void startPreview(Activity activity, SurfaceTexture surfaceTexture, int width, int height) {
         try {
             if (mCamera != null) {
                 mCamera.setPreviewTexture(surfaceTexture);
-                startPreview(activity);
+                startPreview(activity, width, height);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void startPreview(Activity activity) {
+    public static void startPreview(Activity activity, int width, int height) {
         if (mCamera != null) {
             Camera.Parameters parameters = mCamera.getParameters();
             mOrientation = getCameraPreviewOrientation(activity, mCameraID);
-            Size bestSize = getOptimalSize(parameters.getSupportedPreviewSizes());
-            parameters.setPreviewSize(bestSize.getWidth(), bestSize.getHeight());
-            //parameters.setPictureSize(bestSize.getWidth(), bestSize.getHeight());
+            Camera.Size bestPreviewSize = getOptimalSize(parameters.getSupportedPreviewSizes(), width, height);
+            parameters.setPreviewSize(bestPreviewSize.width, bestPreviewSize.height);
+            Camera.Size bestPictureSize = getOptimalSize(parameters.getSupportedPictureSizes(), width, height);
+            parameters.setPictureSize(bestPictureSize.width, bestPictureSize.height);
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             mCamera.setParameters(parameters);
             mCamera.setDisplayOrientation(mOrientation);
@@ -114,18 +117,66 @@ public class CameraUtil {
         }
     }
 
-    private static Size getOptimalSize(List<Camera.Size> supportList) {
-        int width = 0;
-        int height = 0;
-        Iterator<Camera.Size> itor = supportList.iterator();
-        while (itor.hasNext()) {
-            Camera.Size cur = itor.next();
-            if (cur.width >= width && cur.height >= height) {
-                width = cur.width;
-                height = cur.height;
+    /**
+     * 获取最合适的尺寸
+     * @param supportList
+     * @param width
+     * @param height
+     * @return
+     */
+    private static Camera.Size getOptimalSize(List<Camera.Size> supportList, int width, int height) {
+        // camera的宽度是大于高度的，这里要保证expectWidth > expectHeight
+        int expectWidth = Math.max(width, height);
+        int expectHeight = Math.min(width, height);
+        // 根据宽度进行排序
+        Collections.sort(supportList, new Comparator<Camera.Size>() {
+            @Override
+            public int compare(Camera.Size pre, Camera.Size after) {
+                if (pre.width > after.width) {
+                    return 1;
+                } else if (pre.width < after.width) {
+                    return -1;
+                }
+                return 0;
+            }
+        });
+
+        Camera.Size result = supportList.get(0);
+        boolean widthOrHeight = false; // 判断存在宽或高相等的Size
+        // 辗转计算宽高最接近的值
+        for (Camera.Size size: supportList) {
+            // 如果宽高相等，则直接返回
+            if (size.width == expectWidth && size.height == expectHeight) {
+                result = size;
+                break;
+            }
+            // 仅仅是宽度相等，计算高度最接近的size
+            if (size.width == expectWidth) {
+                widthOrHeight = true;
+                if (Math.abs(result.height - expectHeight)
+                        > Math.abs(size.height - expectHeight)) {
+                    result = size;
+                }
+            }
+            // 高度相等，则计算宽度最接近的Size
+            else if (size.height == expectHeight) {
+                widthOrHeight = true;
+                if (Math.abs(result.width - expectWidth)
+                        > Math.abs(size.width - expectWidth)) {
+                    result = size;
+                }
+            }
+            // 如果之前的查找不存在宽或高相等的情况，则计算宽度和高度都最接近的期望值的Size
+            else if (!widthOrHeight) {
+                if (Math.abs(result.width - expectWidth)
+                        > Math.abs(size.width - expectWidth)
+                        && Math.abs(result.height - expectHeight)
+                        > Math.abs(size.height - expectHeight)) {
+                    result = size;
+                }
             }
         }
-        return new Size(width, height);
+        return result;
     }
 
     public static int getCameraPreviewOrientation(Activity activity, int cameraId) {
