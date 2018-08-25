@@ -12,15 +12,17 @@ import java.nio.FloatBuffer;
  */
 public class CameraGLSufaceRender extends GLAbstractRender {
     private Context mContext;
-    private int mTexture;
-    private SurfaceTexture mSurfaceTexture;
+    private int mExternalTexture;
+    private int mFrameBufferTexture;
+    private int mFrameBuffer;
+    private SurfaceTexture mExternalSurfaceTexture;
     private FloatBuffer vertexBuffer;
     private FloatBuffer backTextureBuffer;
     private FloatBuffer frontTextureBuffer;
     private CameraGLSufaceRenderCallback mRenderCallback;
     private boolean isBackCamera;
 
-    private float vertexData[] = {   // in counterclockwise order:
+    private float vertexData[] = {
             -1f, -1f, 0.0f, // 左下角
             1f, -1f, 0.0f, // 右下角
             -1f, 1f, 0.0f, // 左上角
@@ -86,13 +88,16 @@ public class CameraGLSufaceRender extends GLAbstractRender {
 
     @Override
     protected void onCreate() {
-        mTexture = loadExternelTexture();
+
+        mExternalTexture = loadExternelTexture(); // 外部数据纹理
+        mFrameBufferTexture = createTexture();
+        mFrameBuffer = createFrameBuffer();
 
         av_Position = GLES20.glGetAttribLocation(mProgram, "av_Position");
         af_Position = GLES20.glGetAttribLocation(mProgram, "af_Position");
         s_Texture = GLES20.glGetUniformLocation(mProgram, "s_Texture");
-        mSurfaceTexture = new SurfaceTexture(mTexture);
-        mSurfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
+        mExternalSurfaceTexture = new SurfaceTexture(mExternalTexture);
+        mExternalSurfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
                 if (mRenderCallback != null) {
@@ -101,7 +106,7 @@ public class CameraGLSufaceRender extends GLAbstractRender {
             }
         });
         if (mRenderCallback != null) {
-            mRenderCallback.onCreate(mSurfaceTexture);
+            mRenderCallback.onCreate(mExternalSurfaceTexture);
         }
     }
 
@@ -114,9 +119,47 @@ public class CameraGLSufaceRender extends GLAbstractRender {
 
     @Override
     protected void onDraw() {
-        if (mSurfaceTexture != null) {
-            mSurfaceTexture.updateTexImage();
+        if (mExternalSurfaceTexture != null) {
+            mExternalSurfaceTexture.updateTexImage();
         }
+
+        onDrawToDisplay();
+
+        if (mRenderCallback != null) {
+            mRenderCallback.onDraw();
+        }
+    }
+
+    private void onDrawToDisplay() {
+        GLES20.glEnableVertexAttribArray(av_Position);
+        GLES20.glEnableVertexAttribArray(af_Position);
+
+        // 设置顶点位置值
+        GLES20.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES20.GL_FLOAT, false, VertexStride, vertexBuffer);
+        // 设置纹理位置值
+        if (isBackCamera) {
+            GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, backTextureBuffer);
+        } else {
+            GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, frontTextureBuffer);
+        }
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mExternalTexture);
+//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture);
+        GLES20.glUniform1i(s_Texture, 0);
+        // 绘制 GLES20.GL_TRIANGLE_STRIP:复用坐标
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);
+        GLES20.glDisableVertexAttribArray(av_Position);
+        GLES20.glDisableVertexAttribArray(af_Position);
+    }
+
+    // 将 mExternalTexture 绘制到了 mFrameBufferTexture
+    private void onDrawToTexture() {
+        // 直接绘制到mFrameBuffer中
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffer);
+        // 将mFrameBufferTexture绑定到mFrameBuffer
+        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
+                GLES20.GL_TEXTURE_2D, mFrameBufferTexture, 0);
 
         GLES20.glEnableVertexAttribArray(av_Position);
         GLES20.glEnableVertexAttribArray(af_Position);
@@ -131,7 +174,7 @@ public class CameraGLSufaceRender extends GLAbstractRender {
         }
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTexture);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mExternalTexture);
 //        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture);
         GLES20.glUniform1i(s_Texture, 0);
         // 绘制 GLES20.GL_TRIANGLE_STRIP:复用坐标
@@ -139,9 +182,8 @@ public class CameraGLSufaceRender extends GLAbstractRender {
         GLES20.glDisableVertexAttribArray(av_Position);
         GLES20.glDisableVertexAttribArray(af_Position);
 
-        if (mRenderCallback != null) {
-            mRenderCallback.onDraw();
-        }
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
     @Override
@@ -169,7 +211,7 @@ public class CameraGLSufaceRender extends GLAbstractRender {
     }
 
     public SurfaceTexture getSurfaceTexture() {
-        return mSurfaceTexture;
+        return mExternalSurfaceTexture;
     }
 
     public void setBackCamera(boolean isBackCamera) {

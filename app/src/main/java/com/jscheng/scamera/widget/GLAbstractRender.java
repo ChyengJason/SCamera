@@ -66,7 +66,32 @@ public abstract class GLAbstractRender implements GLSurfaceView.Renderer {
         if (bitmap == null) {
             return -1;
         }
+        int texture = createTexture();
+        //根据以上指定的参数，生成一个2D纹理
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        bitmap.recycle();
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+        return texture;
+    }
 
+    // TODO: 了解清楚
+    protected int loadExternelTexture() {
+        int[] texture = new int[1];
+        GLES20.glGenTextures(1, texture, 0);
+        if (texture[0] == 0) {
+            return -1;
+        }
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texture[0]);
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+        return texture[0];
+    }
+
+    protected int createTexture() {
         int[] textureIds = new int[1];
         //创建纹理
         GLES20.glGenTextures(1, textureIds, 0);
@@ -83,24 +108,14 @@ public abstract class GLAbstractRender implements GLSurfaceView.Renderer {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S,GLES20.GL_CLAMP_TO_EDGE);
         //设置环绕方向T，截取纹理坐标到[1/2n,1-1/2n]。将导致永远不会与border融合
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T,GLES20.GL_CLAMP_TO_EDGE);
-        //根据以上指定的参数，生成一个2D纹理
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-        bitmap.recycle();
-        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
         return textureIds[0];
     }
 
-    // TODO: 了解清楚
-    protected int loadExternelTexture() {
-            int[] texture = new int[1];
-            GLES20.glGenTextures(1, texture, 0);
-            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texture[0]);
-            GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
-            GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
-            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE);
-            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE);
-            return texture[0];
+    protected int createFrameBuffer() {
+        int[] frameBuffers = new int[1];
+        GLES20.glGenFramebuffers(1, frameBuffers, 0); // 创建一个frameBuffer
+        return frameBuffers[0];
     }
 
     protected void createProgram() {
@@ -118,6 +133,16 @@ public abstract class GLAbstractRender implements GLSurfaceView.Renderer {
             GLES20.glDeleteProgram(mProgram);
             return;
         }
+    }
+
+    protected static void bindFrameTexture(int frameBufferId, int textureId){
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, frameBufferId);
+        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
+                GLES20.GL_TEXTURE_2D, textureId, 0);
+    }
+
+    protected static void unBindFrameBuffer(){
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER,0);
     }
 
     protected abstract String getVertexSource();
