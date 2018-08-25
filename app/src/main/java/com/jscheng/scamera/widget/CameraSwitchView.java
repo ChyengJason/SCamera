@@ -9,7 +9,6 @@ import android.util.Log;
  * Created By Chengjunsen on 2018/8/24
  */
 public class CameraSwitchView extends android.support.v7.widget.AppCompatImageView {
-    private static final String TAG = CameraSwitchView.class.getSimpleName();
     private static final int ORIENTATION_UP = 0;
     private static final int ORIENTATION_BOTTOM = 180;
     private static final int ORIENTATION_LEFT = 90;

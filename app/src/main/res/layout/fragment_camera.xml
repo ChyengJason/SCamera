@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:camera_progress_button="http://schemas.android.com/apk/res-auto">
-    <TextureView
+    <com.jscheng.scamera.widget.CameraGLSurfaceView
         android:id="@+id/camera_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

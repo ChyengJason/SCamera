@@ -22,14 +22,14 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import static com.jscheng.scamera.util.LogUtil.TAG;
+
 /**
  * Created By Chengjunsen on 2018/8/23
  */
 public class CameraUtil {
-    private static final String TAG = CameraUtil.class.getSimpleName();
     private static Camera mCamera = null;
     private static int mCameraID = Camera.CameraInfo.CAMERA_FACING_BACK;
-    private static int mOrientation = 0;
 
     private boolean checkCameraHardware(Context context) {
         if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
@@ -58,21 +58,13 @@ public class CameraUtil {
         }
     }
 
-    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceTexture texture, int width, int height) {
+    public static void switchCamera(Activity activity, SurfaceTexture texture, int width, int height) {
         if (mCamera != null) {
             releaseCamera();
-            mCameraID = isBackCamera ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
+            mCameraID = isBackCamera() ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK;
             openCamera();
-            startPreview(activity, texture, width, height);
-        }
-    }
-
-    public static void switchCamera(Activity activity, boolean isBackCamera, SurfaceHolder surfaceHolder, int width, int height) {
-        if (mCamera != null) {
-            releaseCamera();
-            mCameraID = isBackCamera ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT;
-            openCamera();
-            startPreview(activity, surfaceHolder, width, height);
+            setDisplay(texture);
+            startPreview(activity, width, height);
         }
     }
 
@@ -80,22 +72,10 @@ public class CameraUtil {
         return mCameraID == Camera.CameraInfo.CAMERA_FACING_BACK;
     }
 
-    public static void startPreview(Activity activity, SurfaceHolder surfaceHolder, int width, int height) {
-        try {
-            if (mCamera != null) {
-                mCamera.setPreviewDisplay(surfaceHolder);
-                startPreview(activity, width, height);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void startPreview(Activity activity, SurfaceTexture surfaceTexture, int width, int height) {
+    public static void setDisplay(SurfaceTexture surfaceTexture) {
         try {
             if (mCamera != null) {
                 mCamera.setPreviewTexture(surfaceTexture);
-                startPreview(activity, width, height);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -104,16 +84,18 @@ public class CameraUtil {
 
     public static void startPreview(Activity activity, int width, int height) {
         if (mCamera != null) {
+            int mOrientation = getCameraPreviewOrientation(activity, mCameraID);
+            mCamera.setDisplayOrientation(mOrientation);
+
             Camera.Parameters parameters = mCamera.getParameters();
-            mOrientation = getCameraPreviewOrientation(activity, mCameraID);
             Camera.Size bestPreviewSize = getOptimalSize(parameters.getSupportedPreviewSizes(), width, height);
             parameters.setPreviewSize(bestPreviewSize.width, bestPreviewSize.height);
             Camera.Size bestPictureSize = getOptimalSize(parameters.getSupportedPictureSizes(), width, height);
             parameters.setPictureSize(bestPictureSize.width, bestPictureSize.height);
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             mCamera.setParameters(parameters);
-            mCamera.setDisplayOrientation(mOrientation);
             mCamera.startPreview();
+            Log.e(TAG, "camera startPreview: (" + width + " x " + height +")");
         }
     }
 

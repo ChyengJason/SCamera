@@ -20,7 +20,6 @@ import com.jscheng.scamera.R;
  * Created By Chengjunsen on 2018/8/22
  */
 public class CameraProgressButton extends View{
-    private static final String TAG = CameraProgressButton.class.getSimpleName();
     private int mMaxProgress = 10000; // 默认10s
     private Paint mBgPaint;
     private Paint mStrokePaint;
