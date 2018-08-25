@@ -31,6 +31,11 @@ public class CameraUtil {
     private static int mCameraID = Camera.CameraInfo.CAMERA_FACING_BACK;
     private static int mOrientation = 0;
 
+    /**
+     * 检查camera硬件
+     * @param context
+     * @return
+     */
     private boolean checkCameraHardware(Context context) {
         if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
             return true;
@@ -199,6 +204,13 @@ public class CameraUtil {
         return result;
     }
 
+    /**
+     * 对焦
+     * @param focusPoint 焦点位置
+     * @param screenSize 屏幕尺寸
+     * @param callback 对焦成功或失败的callback
+     * @return
+     */
     public static boolean newCameraFocus(Point focusPoint, Size screenSize, Camera.AutoFocusCallback callback) {
         if (mCamera == null) {
             throw new RuntimeException("mCamera is null");
@@ -212,6 +224,7 @@ public class CameraUtil {
             }
             clearCameraFocus();
             List<Camera.Area> focusAreas = new ArrayList<Camera.Area>();
+            // 100是权重
             focusAreas.add(new Camera.Area(cameraFoucusRect, 100));
             parameters.setFocusAreas(focusAreas);
             // 设置感光区域
