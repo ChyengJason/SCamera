@@ -14,8 +14,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraGLSuface
     private CameraGLSurfaceViewCallback mCallback;
 
     public CameraGLSurfaceView(Context context) {
-        super(context);
-        init(context);
+        super(context, null);
     }
 
     public CameraGLSurfaceView(Context context, AttributeSet attrs) {
