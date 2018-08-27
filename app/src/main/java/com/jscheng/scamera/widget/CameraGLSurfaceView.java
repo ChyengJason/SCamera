@@ -8,9 +8,9 @@ import android.util.AttributeSet;
 /**
  * Created By Chengjunsen on 2018/8/25
  */
-public class CameraGLSurfaceView extends GLSurfaceView implements CameraGLSufaceRender.CameraGLSufaceRenderCallback{
+public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceRender.CameraSufaceRenderCallback{
 
-    private CameraGLSufaceRender mRender;
+    private CameraSurfaceRender mRender;
     private CameraGLSurfaceViewCallback mCallback;
 
     public CameraGLSurfaceView(Context context) {
@@ -25,14 +25,15 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraGLSuface
 
     private void init(Context context) {
         setEGLContextClientVersion(2);
-        mRender = new CameraGLSufaceRender(context, this);
+        mRender = new CameraSurfaceRender(new TextureRenderDrawer());
+        mRender.setCallback(this);
+        mRender.setBackCamera(true);
         setRenderer(mRender);
         setRenderMode(RENDERMODE_WHEN_DIRTY);
     }
 
     public SurfaceTexture getSurfaceTexture() {
-        assert (mRender.getSurfaceTexture() == null);
-        return mRender.getSurfaceTexture();
+        return mRender.getCameraSurfaceTexture();
     }
 
     @Override

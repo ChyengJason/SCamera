@@ -1,4 +1,4 @@
-package com.jscheng.scamera.widget;
+package com.jscheng.scamera;
 
 import android.content.Context;
 import android.graphics.Bitmap;
