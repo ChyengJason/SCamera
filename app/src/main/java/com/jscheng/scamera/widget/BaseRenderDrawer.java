@@ -21,9 +21,6 @@ public abstract class BaseRenderDrawer {
 
     protected boolean isBackCamera;
 
-    // 纹理id
-    protected int mTextureId;
-
     //顶点坐标 Buffer
     protected FloatBuffer mVertexBuffer;
 
@@ -84,6 +81,7 @@ public abstract class BaseRenderDrawer {
     public void draw(){
         clear();
         useProgram();
+        viewPort();
         onDraw();
     }
 
@@ -122,6 +120,10 @@ public abstract class BaseRenderDrawer {
         GLES20.glUseProgram(mProgram);
     }
 
+    protected void viewPort() {
+        GLES20.glViewport(0, 0 , width, height);
+    }
+
 //    protected void draw(){
 //        GLES20.glEnableVertexAttribArray(mHPosition);
 //        GLES20.glVertexAttribPointer(mHPosition,2, GLES20.GL_FLOAT, false, 0, mVerBuffer);
@@ -147,6 +149,8 @@ public abstract class BaseRenderDrawer {
             GLES20.glDeleteProgram(program);
             return 0;
         }
+        GLES20.glDeleteShader(mVertexShader);
+        GLES20.glDeleteShader(mFragmentShader);
         return program;
     }
 
@@ -165,13 +169,9 @@ public abstract class BaseRenderDrawer {
         return shader;
     }
 
-    public void setTextureId(int textureId) {
-        this.mTextureId = textureId;
-    }
+    public abstract void setInputTextureId(int textureId);
 
-    public int getTextureId() {
-        return this.mTextureId;
-    }
+    public abstract int getOutputTextureId();
 
     public boolean isBackCamera() {
         return isBackCamera;

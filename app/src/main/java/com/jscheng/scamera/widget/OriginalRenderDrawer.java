@@ -10,6 +10,7 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
     private int av_Position;
     private int af_Position;
     private int s_Texture;
+    private int mTextureId;
 
     @Override
     protected void onCreated() {
@@ -48,6 +49,16 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
 
     private void unBindTexure() {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+    }
+
+    @Override
+    public void setInputTextureId(int textureId) {
+        mTextureId = textureId;
+    }
+
+    @Override
+    public int getOutputTextureId() {
+        return mTextureId;
     }
 
     @Override

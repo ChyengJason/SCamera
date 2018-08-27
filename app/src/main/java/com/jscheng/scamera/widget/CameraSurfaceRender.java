@@ -22,7 +22,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         this.mTextureDrawer = mTextureDrawer;
         mCameraTextureId = createCameraTexture();
         mCameraTexture = new SurfaceTexture(mCameraTextureId);
-        mTextureDrawer.setTextureId(mCameraTextureId);
+        mTextureDrawer.setInputTextureId(mCameraTextureId);
         mCameraTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
@@ -53,6 +53,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl10) {
         if (mCameraTexture != null) {
             mCameraTexture.updateTexImage();
+//            mCameraTexture.getTransformMatrix();
         }
         mTextureDrawer.draw();
         if (mCallback != null) {
