@@ -184,6 +184,20 @@ public abstract class BaseRenderDrawer {
         return shader;
     }
 
+    protected void checkFrameBuffer() {
+        int status= GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER);
+        if(status !=GLES20.GL_FRAMEBUFFER_COMPLETE) {
+            Log.e(TAG, "checkFrameBuffer error: " + status);
+            throw new RuntimeException("status:" + status + ", hex:" + Integer.toHexString(status));
+        }
+    }
+
+    protected void checkError() {
+        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) {
+            Log.e(TAG, "createOutputTexture: " + GLES20.glGetError() );
+        }
+    }
+
     public abstract void setInputTextureId(int textureId);
 
     public abstract int getOutputTextureId();

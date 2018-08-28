@@ -158,19 +158,6 @@ public class TextureRenderDrawer extends BaseRenderDrawer {
         GLES20.glDeleteTextures(1, new int[]{mFrameTexture}, 0);
     }
 
-    private void checkFrameBuffer() {
-        int status= GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER);
-        if(status !=GLES20.GL_FRAMEBUFFER_COMPLETE) {
-            Log.e(TAG, "checkFrameBuffer error: " + status);
-            throw new RuntimeException("status:" + status + ", hex:" + Integer.toHexString(status));
-        }
-    }
-
-    private void checkError() {
-        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) {
-            Log.e(TAG, "createOutputTexture: " + GLES20.glGetError() );
-        }
-    }
     @Override
     public void setInputTextureId(int textureId) {
         mOrignialRenderDrawer.setInputTextureId(textureId);
