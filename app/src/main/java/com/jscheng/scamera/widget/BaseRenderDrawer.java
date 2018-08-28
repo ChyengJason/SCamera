@@ -30,11 +30,13 @@ public abstract class BaseRenderDrawer {
     //纹理坐标 Buffer
     protected FloatBuffer mBackTextureBuffer;
 
+    protected FloatBuffer mFrameTextureBuffer;
+
     protected float vertexData[] = {
             -1f, -1f, 0.0f, // 左下角
             1f, -1f, 0.0f, // 右下角
             -1f, 1f, 0.0f, // 左上角
-            1f, 1f, 0.0f,  // 右上角
+            1f, 1f, 0.0f  // 右上角
     };
 
     // 纹理坐标对应顶点坐标与后置摄像头映射
@@ -51,6 +53,13 @@ public abstract class BaseRenderDrawer {
             0f, 0f, //  左下角
             1f, 1f, // 右上角
             1f, 0f // 右下角
+    };
+
+    protected float frameTextureData[] = {
+            0.0f, 1.0f,
+            1.0f, 1.0f,
+            0.0f, 0.0f,
+            1.0f, 0.0f
     };
 
     protected final int CoordsPerVertexCount = 3;
@@ -72,7 +81,7 @@ public abstract class BaseRenderDrawer {
         onCreated();
     }
 
-    public void changeSize(int width, int height) {
+    public void surfaceChangedSize(int width, int height) {
         this.width = width;
         this.height = height;
         onChanged(width, height);
@@ -86,7 +95,7 @@ public abstract class BaseRenderDrawer {
     }
 
     protected void clear(){
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
     }
 
@@ -114,6 +123,12 @@ public abstract class BaseRenderDrawer {
                 .asFloatBuffer()
                 .put(frontTextureData);
         this.mFrontTextureBuffer.position(0);
+
+        this.mFrameTextureBuffer = ByteBuffer.allocateDirect(frameTextureData.length * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .put(frameTextureData);
+        this.mFrameTextureBuffer.position(0);
     }
 
     protected void useProgram(){
@@ -121,7 +136,7 @@ public abstract class BaseRenderDrawer {
     }
 
     protected void viewPort() {
-        GLES20.glViewport(0, 0 , width, height);
+        GLES20.glViewport(0, 0, width, height);
     }
 
 //    protected void draw(){

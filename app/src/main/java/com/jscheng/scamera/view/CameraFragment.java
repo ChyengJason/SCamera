@@ -149,7 +149,6 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             CameraUtil.startPreview(getActivity(), mPreviewSize.getWidth(), mPreviewSize.getHeight());
             mCameraSensor.start();
             mSwitchView.setOrientation(mCameraSensor.getX(), mCameraSensor.getY(), mCameraSensor.getZ());
-            Log.e(TAG, "startPreview fisish" );
         }
     }
 

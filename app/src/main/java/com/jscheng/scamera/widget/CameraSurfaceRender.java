@@ -43,7 +43,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
-        mTextureDrawer.changeSize(width, height);
+        mTextureDrawer.surfaceChangedSize(width, height);
         if (mCallback != null) {
             mCallback.onChanged(width, height);
         }
@@ -68,9 +68,6 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
     private int createCameraTexture() {
         int[] texture = new int[1];
         GLES20.glGenTextures(1, texture, 0);
-        if (texture[0] == 0) {
-            return -1;
-        }
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texture[0]);
         GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
         GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);

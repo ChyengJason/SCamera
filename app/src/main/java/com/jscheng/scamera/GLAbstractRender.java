@@ -34,7 +34,7 @@ public abstract class GLAbstractRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
-        GLES20.glViewport(0,0,width,height);
+        GLES20.glViewport(0, 0, width, height);
         this.height = height;
         this.width = width;
         onChanged();
