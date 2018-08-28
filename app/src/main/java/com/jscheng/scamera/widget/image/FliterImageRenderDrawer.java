@@ -13,9 +13,7 @@ import com.jscheng.scamera.widget.BaseRenderDrawer;
 import static com.jscheng.scamera.util.LogUtil.TAG;
 
 public class FliterImageRenderDrawer extends BaseRenderDrawer {
-    private int mInputTextureId;
-    private int mOutputTextureId;
-    private int mFrameBuffer;
+    private int mTextureId;
     private int avPosition;
     private int afPosition;
     private int sTexture;
@@ -27,19 +25,17 @@ public class FliterImageRenderDrawer extends BaseRenderDrawer {
 
     @Override
     public void setInputTextureId(int textureId) {
-        mInputTextureId = textureId;
+        mTextureId = textureId;
     }
 
     @Override
     public int getOutputTextureId() {
-        return mOutputTextureId;
+        return mTextureId;
+
     }
 
     @Override
     protected void onCreated() {
-        mOutputTextureId = createOutputTexture();
-        mFrameBuffer = createOutputFrameBuffer();
-        bindFrameTexture(mFrameBuffer, mOutputTextureId);
         avPosition = GLES20.glGetAttribLocation(mProgram, "av_Position");
         afPosition = GLES20.glGetAttribLocation(mProgram, "af_Position");
         sTexture = GLES20.glGetUniformLocation(mProgram, "sTexture");
@@ -60,56 +56,12 @@ public class FliterImageRenderDrawer extends BaseRenderDrawer {
         GLES20.glVertexAttribPointer(afPosition, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mFrameTextureBuffer);
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mOutputTextureId);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureId);
         GLES20.glUniform1i(sTexture, 0);
         //绘制 GLES20.GL_TRIANGLE_STRIP:复用坐标
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);
         GLES20.glDisableVertexAttribArray(avPosition);
         GLES20.glDisableVertexAttribArray(afPosition);
-    }
-
-    private int createOutputFrameBuffer() {
-        int[] buffers = new int[1];
-        GLES20.glGenFramebuffers(1, buffers, 0);
-        return buffers[0];
-    }
-
-    private int createOutputTexture() {
-        if (width <= 0 || height <= 0) {
-            Log.e(TAG, "createOutputTexture: width or height is 0");
-            return -1;
-        }
-        int[] textures = new int[1];
-        GLES20.glGenTextures(1, textures, 0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[0]);
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, width, height, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null);
-        //设置环绕方向S，截取纹理坐标到[1/2n,1-1/2n]。将导致永远不会与border融合
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-        //设置环绕方向T，截取纹理坐标到[1/2n,1-1/2n]。将导致永远不会与border融合
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-        //设置缩小过滤为使用纹理中坐标最接近的一个像素的颜色作为需要绘制的像素颜色
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
-        //设置放大过滤为使用纹理中坐标最接近的若干个颜色，通过加权平均算法得到需要绘制的像素颜色
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
-        checkError();
-        return textures[0];
-    }
-
-    private void bindFrameTexture(int frameBufferId, int textureId){
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, frameBufferId);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
-        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, textureId, 0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
-        checkError();
-    }
-
-    public void bindFrameBuffer() {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffer);
-    }
-
-    public void unBindFrameBuffer() {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
     @Override

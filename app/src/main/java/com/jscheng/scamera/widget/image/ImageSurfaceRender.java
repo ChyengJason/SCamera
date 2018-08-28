@@ -34,10 +34,9 @@ public class ImageSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl10) {
-//        mFliterRender.bindFrameBuffer();
         mOriginalRender.draw();
-//        mFliterRender.unBindFrameBuffer();
-//        mFliterRender.draw();
+        mFliterRender.setInputTextureId(mOriginalRender.getOutputTextureId());
+        mFliterRender.draw();
     }
 
     public SurfaceTexture getCameraSurfaceTexture() {
