@@ -1,7 +1,9 @@
-package com.jscheng.scamera.widget;
+package com.jscheng.scamera.render;
 
 import android.opengl.GLES20;
 import android.util.Log;
+
+import com.jscheng.scamera.util.GlesUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -77,7 +79,7 @@ public abstract class BaseRenderDrawer {
     }
 
     public void create() {
-        mProgram = createProgram();
+        mProgram = GlesUtil.createProgram(getVertexSource(), getFragmentSource());
         onCreated();
     }
 
@@ -95,7 +97,7 @@ public abstract class BaseRenderDrawer {
     }
 
     protected void clear(){
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
     }
 
@@ -149,54 +151,7 @@ public abstract class BaseRenderDrawer {
 //        GLES20.glDisableVertexAttribArray(mHCoord);
 //    }
 
-    protected int createProgram() {
-        int mVertexShader = loadShader(GLES20.GL_VERTEX_SHADER, getVertexSource());
-        int mFragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, getFragmentSource());
-        int program = GLES20.glCreateProgram();
-        GLES20.glAttachShader(program, mVertexShader);
-        GLES20.glAttachShader(program, mFragmentShader);
-        GLES20.glLinkProgram(program);
-        int [] status = new int[1];
-        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, status, 0);
-        if (status[0] != GLES20.GL_TRUE) {
-            Log.e(TAG, "createProgam: link error");
-            Log.e(TAG, "createProgam: " + GLES20.glGetProgramInfoLog(program));
-            GLES20.glDeleteProgram(program);
-            return 0;
-        }
-        GLES20.glDeleteShader(mVertexShader);
-        GLES20.glDeleteShader(mFragmentShader);
-        return program;
-    }
 
-    protected int loadShader(int shaderType, String shaderSource) {
-        int shader = GLES20.glCreateShader(shaderType);
-        GLES20.glShaderSource(shader, shaderSource);
-        GLES20.glCompileShader(shader);
-        int status[] = new int[1];
-        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, status, 0);
-        if (status[0] == 0) {
-            Log.e(TAG, "loadShader: compiler error");
-            Log.e(TAG, "loadShader: " + GLES20.glGetShaderInfoLog(shader) );
-            GLES20.glDeleteShader(shader);
-            return 0;
-        }
-        return shader;
-    }
-
-    protected void checkFrameBuffer() {
-        int status= GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER);
-        if(status !=GLES20.GL_FRAMEBUFFER_COMPLETE) {
-            Log.e(TAG, "checkFrameBuffer error: " + status);
-            throw new RuntimeException("status:" + status + ", hex:" + Integer.toHexString(status));
-        }
-    }
-
-    protected void checkError() {
-        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) {
-            Log.e(TAG, "createOutputTexture: " + GLES20.glGetError() );
-        }
-    }
 
     public abstract void setInputTextureId(int textureId);
 

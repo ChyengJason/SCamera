@@ -1,9 +1,9 @@
-package com.jscheng.scamera.widget;
+package com.jscheng.scamera.render;
 
 import android.graphics.SurfaceTexture;
-import android.opengl.GLES11Ext;
-import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+
+import com.jscheng.scamera.util.GlesUtil;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -13,16 +13,19 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
-    private BaseRenderDrawer mTextureDrawer;
+    private OriginalRenderDrawer mCameraDrawer;
+    private DisplayRenderDrawer mTextureDrawer;
     private CameraSufaceRenderCallback mCallback;
     private SurfaceTexture mCameraTexture;
     private int mCameraTextureId;
 
-    public CameraSurfaceRender(BaseRenderDrawer mTextureDrawer) {
-        this.mTextureDrawer = mTextureDrawer;
-        mCameraTextureId = createCameraTexture();
+    public CameraSurfaceRender() {
+        this.mCameraDrawer = new OriginalRenderDrawer();
+        this.mTextureDrawer = new DisplayRenderDrawer();
+        mCameraTextureId = GlesUtil.createCameraTexture();
+
         mCameraTexture = new SurfaceTexture(mCameraTextureId);
-        mTextureDrawer.setInputTextureId(mCameraTextureId);
+        mCameraDrawer.setInputTextureId(mCameraTextureId);
         mCameraTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
@@ -35,6 +38,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
+        mCameraDrawer.create();
         mTextureDrawer.create();
         if (mCallback != null) {
             mCallback.onCreate(mCameraTexture);
@@ -43,6 +47,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
+        mCameraDrawer.surfaceChangedSize(width, height);
         mTextureDrawer.surfaceChangedSize(width, height);
         if (mCallback != null) {
             mCallback.onChanged(width, height);
@@ -55,7 +60,13 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
             mCameraTexture.updateTexImage();
 //            mCameraTexture.getTransformMatrix();
         }
+
+        mCameraDrawer.bindFrameBuffer();
+        mCameraDrawer.draw();
+        mCameraDrawer.unBindFrameBuffer();
+        mTextureDrawer.setInputTextureId(mCameraDrawer.getOutputTextureId());
         mTextureDrawer.draw();
+
         if (mCallback != null) {
             mCallback.onDraw();
         }
@@ -65,20 +76,8 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         return mCameraTexture;
     }
 
-    private int createCameraTexture() {
-        int[] texture = new int[1];
-        GLES20.glGenTextures(1, texture, 0);
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texture[0]);
-        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
-        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE);
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE);
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
-        return texture[0];
-    }
-
     public void setBackCamera(boolean isBackCamera) {
-        mTextureDrawer.setBackCamera(isBackCamera);
+        mCameraDrawer.setBackCamera(isBackCamera);
     }
 
     public void setCallback(CameraSufaceRenderCallback mCallback) {

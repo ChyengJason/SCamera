@@ -5,17 +5,15 @@ import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 
-import com.jscheng.scamera.widget.image.ImageSurfaceRender;
+import com.jscheng.scamera.render.CameraSurfaceRender;
 
 /**
  * Created By Chengjunsen on 2018/8/25
  */
 public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceRender.CameraSufaceRenderCallback{
 
-    //private CameraSurfaceRender mRender;
-    //private CameraGLSurfaceViewCallback mCallback;
-
-    private ImageSurfaceRender mRender;
+    private CameraSurfaceRender mRender;
+    private CameraGLSurfaceViewCallback mCallback;
 
     public CameraGLSurfaceView(Context context) {
         super(context, null);
@@ -28,10 +26,9 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
 
     private void init(Context context) {
         setEGLContextClientVersion(2);
-        //mRender = new CameraSurfaceRender(new TextureRenderDrawer());
-        //mRender.setCallback(this);
-        //mRender.setBackCamera(true);
-        mRender = new ImageSurfaceRender(context);
+        mRender = new CameraSurfaceRender();
+        mRender.setCallback(this);
+        mRender.setBackCamera(true);
         setDebugFlags(GLSurfaceView.DEBUG_CHECK_GL_ERROR);
         setRenderer(mRender);
         setRenderMode(RENDERMODE_WHEN_DIRTY);
@@ -48,16 +45,16 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
 
     @Override
     public void onCreate(SurfaceTexture texture) {
-//        if (mCallback != null) {
-//            mCallback.onSurfaceViewCreate(texture);
-//        }
+        if (mCallback != null) {
+            mCallback.onSurfaceViewCreate(texture);
+        }
     }
 
     @Override
     public void onChanged(int width, int height) {
-//        if (mCallback != null) {
-//            mCallback.onSurfaceViewChange(width, height);
-//        }
+        if (mCallback != null) {
+            mCallback.onSurfaceViewChange(width, height);
+        }
     }
 
     @Override
@@ -66,11 +63,11 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
     }
 
     public void setCallback(CameraGLSurfaceViewCallback mCallback) {
-        //this.mCallback = mCallback;
+        this.mCallback = mCallback;
     }
 
     public void setBackCamera(boolean isBackCamera) {
-        //this.mRender.setBackCamera(isBackCamera);
+        this.mRender.setBackCamera(isBackCamera);
     }
 
     public interface CameraGLSurfaceViewCallback {

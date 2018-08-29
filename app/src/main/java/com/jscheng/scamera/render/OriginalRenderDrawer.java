@@ -1,7 +1,10 @@
-package com.jscheng.scamera.widget;
+package com.jscheng.scamera.render;
 
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+
+import com.jscheng.scamera.render.BaseRenderDrawer;
+import com.jscheng.scamera.util.GlesUtil;
 
 /**
  * Created By Chengjunsen on 2018/8/27
@@ -10,23 +13,28 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
     private int av_Position;
     private int af_Position;
     private int s_Texture;
-    private int mTextureId;
+    private int mInputTextureId;
+    private int mOutputTextureId;
+    private int mFrameBuffer;
 
     @Override
     protected void onCreated() {
+
+    }
+
+    @Override
+    protected void onChanged(int width, int height) {
+        mOutputTextureId = GlesUtil.createFrameTexture(width, height);
+        mFrameBuffer = GlesUtil.createFrameBuffer();
+        GlesUtil.bindFrameTexture(mFrameBuffer, mOutputTextureId);
+
         av_Position = GLES20.glGetAttribLocation(mProgram, "av_Position");
         af_Position = GLES20.glGetAttribLocation(mProgram, "af_Position");
         s_Texture = GLES20.glGetUniformLocation(mProgram, "s_Texture");
     }
 
     @Override
-    protected void onChanged(int width, int height) {
-
-    }
-
-    @Override
     protected void onDraw() {
-        bindTexture(mTextureId);
         GLES20.glEnableVertexAttribArray(av_Position);
         GLES20.glEnableVertexAttribArray(af_Position);
         GLES20.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES20.GL_FLOAT, false, VertexStride, mVertexBuffer);
@@ -35,10 +43,11 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
         } else {
             GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mFrontTextureBuffer);
         }
+        bindTexture(mInputTextureId);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);
+        unBindTexure();
         GLES20.glDisableVertexAttribArray(av_Position);
         GLES20.glDisableVertexAttribArray(af_Position);
-        unBindTexure();
     }
 
     private void bindTexture(int textureId) {
@@ -51,14 +60,29 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
     }
 
+    public void bindFrameBuffer() {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffer);
+        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, mOutputTextureId, 0);
+    }
+
+    public void unBindFrameBuffer() {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+    }
+
+    private void deleteFrameBuffer() {
+//        GLES20.glDeleteRenderbuffers(1, new int[]{mFrameRender}, 0);
+        GLES20.glDeleteFramebuffers(1, new int[]{mFrameBuffer}, 0);
+        GLES20.glDeleteTextures(1, new int[]{mOutputTextureId}, 0);
+    }
+
     @Override
     public void setInputTextureId(int textureId) {
-        mTextureId = textureId;
+        mInputTextureId = textureId;
     }
 
     @Override
     public int getOutputTextureId() {
-        return mTextureId;
+        return mOutputTextureId;
     }
 
     @Override

@@ -1,53 +1,54 @@
-package com.jscheng.scamera.widget.image;
+package com.jscheng.scamera.render.image;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
-import android.opengl.GLUtils;
-import android.util.Log;
 
 import com.jscheng.scamera.R;
-import com.jscheng.scamera.widget.BaseRenderDrawer;
+import com.jscheng.scamera.util.GlesUtil;
+import com.jscheng.scamera.render.BaseRenderDrawer;
 
-import static com.jscheng.scamera.util.LogUtil.TAG;
-
-public class FliterImageRenderDrawer extends BaseRenderDrawer {
-    private int mTextureId;
+public class OriginalImageRenderDrawer extends BaseRenderDrawer {
+    private int mInputTextureId;
+    private int mOutputTextureId;
     private int avPosition;
     private int afPosition;
     private int sTexture;
     private Context mContext;
+    private int mFrameBuffer;
 
-    public FliterImageRenderDrawer(Context context) {
+    public OriginalImageRenderDrawer(Context context) {
         this.mContext = context;
     }
 
     @Override
     public void setInputTextureId(int textureId) {
-        mTextureId = textureId;
+        mInputTextureId = textureId;
     }
 
     @Override
     public int getOutputTextureId() {
-        return mTextureId;
-
+        return mOutputTextureId;
     }
 
     @Override
     protected void onCreated() {
+    }
+
+    @Override
+    protected void onChanged(int width, int height) {
+        mOutputTextureId = GlesUtil.createFrameTexture(width, height);
+        mFrameBuffer = GlesUtil.createFrameBuffer();
+        GlesUtil.bindFrameTexture(mFrameBuffer, mOutputTextureId);
+        mInputTextureId = GlesUtil.loadBitmapTexture(mContext, R.mipmap.ic_launcher);
         avPosition = GLES20.glGetAttribLocation(mProgram, "av_Position");
         afPosition = GLES20.glGetAttribLocation(mProgram, "af_Position");
         sTexture = GLES20.glGetUniformLocation(mProgram, "sTexture");
     }
 
     @Override
-    protected void onChanged(int width, int height) {
-
-    }
-
-    @Override
     protected void onDraw() {
+        bindFrameBuffer();
+
         GLES20.glEnableVertexAttribArray(avPosition);
         GLES20.glEnableVertexAttribArray(afPosition);
         //设置顶点位置值
@@ -56,12 +57,22 @@ public class FliterImageRenderDrawer extends BaseRenderDrawer {
         GLES20.glVertexAttribPointer(afPosition, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mFrameTextureBuffer);
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureId);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mInputTextureId);
         GLES20.glUniform1i(sTexture, 0);
         //绘制 GLES20.GL_TRIANGLE_STRIP:复用坐标
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);
         GLES20.glDisableVertexAttribArray(avPosition);
         GLES20.glDisableVertexAttribArray(afPosition);
+
+        unBindFrameBuffer();
+    }
+
+    public void bindFrameBuffer() {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffer);
+    }
+
+    public void unBindFrameBuffer() {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
     @Override
