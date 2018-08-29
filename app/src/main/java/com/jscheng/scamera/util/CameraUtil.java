@@ -63,14 +63,8 @@ public class CameraUtil {
         }
     }
 
-    public static void switchCamera(Activity activity, SurfaceTexture texture, int width, int height) {
-        if (mCamera != null) {
-            releaseCamera();
-            mCameraID = isBackCamera() ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK;
-            openCamera();
-            setDisplay(texture);
-            startPreview(activity, width, height);
-        }
+    public static void switchCameraId() {
+        mCameraID = isBackCamera() ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK;
     }
 
     public static boolean isBackCamera() {

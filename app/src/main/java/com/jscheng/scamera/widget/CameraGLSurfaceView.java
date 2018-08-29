@@ -44,9 +44,9 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
     }
 
     @Override
-    public void onCreate(SurfaceTexture texture) {
+    public void onCreate() {
         if (mCallback != null) {
-            mCallback.onSurfaceViewCreate(texture);
+            mCallback.onSurfaceViewCreate(getSurfaceTexture());
         }
     }
 

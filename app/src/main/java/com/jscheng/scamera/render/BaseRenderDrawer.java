@@ -21,8 +21,6 @@ public abstract class BaseRenderDrawer {
 
     protected int mProgram;
 
-    protected boolean isBackCamera;
-
     //顶点坐标 Buffer
     protected FloatBuffer mVertexBuffer;
 
@@ -41,16 +39,14 @@ public abstract class BaseRenderDrawer {
             1f, 1f, 0.0f  // 右上角
     };
 
-    // 纹理坐标对应顶点坐标与后置摄像头映射
-    protected float backTextureData[] = {
+    protected float frontTextureData[] = {
             1f, 1f, // 右上角
             1f, 0f, // 右下角
             0f, 1f, // 左上角
             0f, 0f //  左下角
     };
 
-    // 纹理坐标对应顶点坐标与前置摄像头映射
-    protected float frontTextureData[] = {
+    protected float backTextureData[] = {
             0f, 1f, // 左上角
             0f, 0f, //  左下角
             1f, 1f, // 右上角
@@ -156,14 +152,6 @@ public abstract class BaseRenderDrawer {
     public abstract void setInputTextureId(int textureId);
 
     public abstract int getOutputTextureId();
-
-    public boolean isBackCamera() {
-        return isBackCamera;
-    }
-
-    public void setBackCamera(boolean backCamera) {
-        isBackCamera = backCamera;
-    }
 
     protected abstract String getVertexSource();
 
