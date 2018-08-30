@@ -2,6 +2,9 @@ package com.jscheng.scamera.render;
 
 import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
+
+import com.jscheng.scamera.util.GlesUtil;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -13,6 +16,8 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
     private OriginalRenderDrawer mCameraDrawer;
     private DisplayRenderDrawer mTextureDrawer;
     private CameraSufaceRenderCallback mCallback;
+    private int mCameraTextureId;
+    private SurfaceTexture mCameraTexture;
 
     public CameraSurfaceRender() {
         this.mCameraDrawer = new OriginalRenderDrawer();
@@ -21,10 +26,18 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
+        mCameraTextureId = GlesUtil.createCameraTexture();
         mCameraDrawer.create();
         mTextureDrawer.create();
-        if (getCameraSurfaceTexture() != null) {
-            getCameraSurfaceTexture().setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
+        initCameraTexture();
+        if (mCallback != null) {
+            mCallback.onCreate();
+        }
+    }
+
+    public void initCameraTexture() {
+        mCameraTexture = new SurfaceTexture(mCameraTextureId);
+        mCameraTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
                 @Override
                 public void onFrameAvailable(SurfaceTexture surfaceTexture) {
                     if (mCallback != null) {
@@ -32,10 +45,6 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
                     }
                 }
             });
-        }
-        if (mCallback != null) {
-            mCallback.onCreate();
-        }
     }
 
     @Override
@@ -49,6 +58,10 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl10) {
+        if (mCameraTexture != null) {
+            mCameraTexture.updateTexImage();
+        }
+        mCameraDrawer.setInputTextureId(mCameraTextureId);
         mCameraDrawer.draw();
         mTextureDrawer.setInputTextureId(mCameraDrawer.getOutputTextureId());
         mTextureDrawer.draw();
@@ -59,15 +72,22 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
     }
 
     public SurfaceTexture getCameraSurfaceTexture() {
-        return mCameraDrawer.getCameraTexture();
-    }
-
-    public void setBackCamera(boolean isBackCamera) {
-        mCameraDrawer.setBackCamera(isBackCamera);
+        return mCameraTexture;
     }
 
     public void setCallback(CameraSufaceRenderCallback mCallback) {
         this.mCallback = mCallback;
+    }
+
+    public void releaseSurfaceTexture() {
+        if (mCameraTexture != null) {
+            mCameraTexture.release();
+            mCameraTexture = null;
+        }
+    }
+
+    public void resumeSurfaceTexture() {
+        initCameraTexture();
     }
 
     public interface CameraSufaceRenderCallback {

@@ -26,10 +26,9 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
 
     private void init(Context context) {
         setEGLContextClientVersion(2);
+        setDebugFlags(GLSurfaceView.DEBUG_CHECK_GL_ERROR);
         mRender = new CameraSurfaceRender();
         mRender.setCallback(this);
-        mRender.setBackCamera(true);
-        setDebugFlags(GLSurfaceView.DEBUG_CHECK_GL_ERROR);
         setRenderer(mRender);
         setRenderMode(RENDERMODE_WHEN_DIRTY);
     }
@@ -66,8 +65,12 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
         this.mCallback = mCallback;
     }
 
-    public void setBackCamera(boolean isBackCamera) {
-        this.mRender.setBackCamera(isBackCamera);
+    public void releaseSurfaceTexture() {
+        mRender.releaseSurfaceTexture();
+    }
+
+    public void resumeSurfaceTexture() {
+        mRender.resumeSurfaceTexture();
     }
 
     public interface CameraGLSurfaceViewCallback {

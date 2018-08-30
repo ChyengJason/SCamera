@@ -5,6 +5,7 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 
 import com.jscheng.scamera.render.BaseRenderDrawer;
+import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.GlesUtil;
 
 /**
@@ -14,16 +15,12 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
     private int av_Position;
     private int af_Position;
     private int s_Texture;
-    private boolean isBackCamera;
-    private SurfaceTexture mCameraTexture;
-    private int mCameraTextureId;
+    private int mInputTextureId;
     private int mOutputTextureId;
     private int mFrameBuffer;
 
     @Override
     protected void onCreated() {
-        mCameraTextureId = GlesUtil.createCameraTexture();
-        mCameraTexture = new SurfaceTexture(mCameraTextureId);
     }
 
     @Override
@@ -39,19 +36,19 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
 
     @Override
     protected void onDraw() {
-        if (mCameraTexture != null) {
-            mCameraTexture.updateTexImage();
+        if (mInputTextureId == 0 || mOutputTextureId == 0) {
+            return;
         }
         bindFrameBuffer();
         GLES20.glEnableVertexAttribArray(av_Position);
         GLES20.glEnableVertexAttribArray(af_Position);
         GLES20.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES20.GL_FLOAT, false, VertexStride, mVertexBuffer);
-        if (isBackCamera) {
+        if (CameraUtil.isBackCamera()) {
             GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mBackTextureBuffer);
         } else {
             GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mFrontTextureBuffer);
         }
-        bindTexture(mCameraTextureId);
+        bindTexture(mInputTextureId);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);
         unBindTexure();
         GLES20.glDisableVertexAttribArray(av_Position);
@@ -86,20 +83,12 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
 
     @Override
     public void setInputTextureId(int textureId) {
-        mCameraTextureId = textureId;
+        mInputTextureId = textureId;
     }
 
     @Override
     public int getOutputTextureId() {
         return mOutputTextureId;
-    }
-
-    public SurfaceTexture getCameraTexture() {
-        return mCameraTexture;
-    }
-
-    public void setBackCamera(boolean backCamera) {
-        this.isBackCamera = backCamera;
     }
 
     @Override

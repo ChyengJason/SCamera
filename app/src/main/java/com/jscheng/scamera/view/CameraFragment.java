@@ -162,10 +162,11 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     public void switchCamera() {
         mFocusView.cancelFocus();
         if (CameraUtil.getCamera() != null && mPreviewSize != null) {
+            mCameraView.releaseSurfaceTexture();
             CameraUtil.releaseCamera();
             CameraUtil.switchCameraId();
-            //mCameraView.setBackCamera(CameraUtil.isBackCamera());
             CameraUtil.openCamera();
+            mCameraView.resumeSurfaceTexture();
             CameraUtil.setDisplay(mCameraView.getSurfaceTexture());
             CameraUtil.startPreview(getActivity(), mPreviewSize.getWidth(), mPreviewSize.getHeight());
         }
