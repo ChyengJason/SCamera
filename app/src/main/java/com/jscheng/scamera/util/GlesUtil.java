@@ -116,12 +116,7 @@ public class GlesUtil {
         return textures[0];
     }
 
-    public static int loadBitmapTexture(Context context, int resourceId) {
-        Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), resourceId);
-        if (bitmap == null) {
-            Log.e(TAG, "loadBitmapTexture:bitmap is null");
-            return -1;
-        }
+    public static int loadBitmapTexture(Bitmap bitmap) {
         int[] textureIds = new int[1];
         GLES20.glGenTextures(1, textureIds, 0);
         if (textureIds[0] == 0) {
@@ -140,10 +135,20 @@ public class GlesUtil {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T,GLES20.GL_CLAMP_TO_EDGE);
         //根据以上指定的参数，生成一个2D纹理
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-        bitmap.recycle();
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
         return textureIds[0];
+    }
+
+    public static int loadBitmapTexture(Context context, int resourceId) {
+        Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), resourceId);
+        if (bitmap == null) {
+            Log.e(TAG, "loadBitmapTexture:bitmap is null");
+            return -1;
+        }
+        int textureId = loadBitmapTexture(bitmap);
+        bitmap.recycle();
+        return textureId;
     }
 
     public static void bindFrameTexture(int frameBufferId, int textureId){

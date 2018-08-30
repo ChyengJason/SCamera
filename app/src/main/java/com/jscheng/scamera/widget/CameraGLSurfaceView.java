@@ -27,7 +27,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
     private void init(Context context) {
         setEGLContextClientVersion(2);
         setDebugFlags(GLSurfaceView.DEBUG_CHECK_GL_ERROR);
-        mRender = new CameraSurfaceRender();
+        mRender = new CameraSurfaceRender(context);
         mRender.setCallback(this);
         setRenderer(mRender);
         setRenderMode(RENDERMODE_WHEN_DIRTY);

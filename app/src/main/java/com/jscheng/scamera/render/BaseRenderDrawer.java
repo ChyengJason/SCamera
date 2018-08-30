@@ -88,7 +88,7 @@ public abstract class BaseRenderDrawer {
     public void draw(){
         clear();
         useProgram();
-        viewPort();
+        viewPort(0, 0, width, height);
         onDraw();
     }
 
@@ -133,8 +133,8 @@ public abstract class BaseRenderDrawer {
         GLES20.glUseProgram(mProgram);
     }
 
-    protected void viewPort() {
-        GLES20.glViewport(0, 0, width, height);
+    protected void viewPort(int left, int top, int right, int bottom) {
+        GLES20.glViewport(left, top, right,  bottom);
     }
 
 //    protected void draw(){
