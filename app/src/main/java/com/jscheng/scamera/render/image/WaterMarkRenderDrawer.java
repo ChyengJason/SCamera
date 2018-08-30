@@ -50,7 +50,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     public void draw() {
         useProgram();
         //clear();
-        viewPort(0, 0 , mBitmap.getWidth(), mBitmap.getHeight());
+        viewPort(50, height - mBitmap.getHeight() - 80, mBitmap.getWidth(), mBitmap.getHeight());
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_COLOR,GLES20.GL_DST_ALPHA);
