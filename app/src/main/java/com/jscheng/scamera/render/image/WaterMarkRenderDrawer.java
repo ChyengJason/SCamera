@@ -13,7 +13,7 @@ import com.jscheng.scamera.util.GlesUtil;
  * Created By Chengjunsen on 2018/8/29
  */
 public class WaterMarkRenderDrawer extends BaseRenderDrawer{
-    private int mOutputTextureId;
+    private int mMarkTextureId;
     private int mInputTextureId;
     private Bitmap mBitmap;
     private int avPosition;
@@ -21,7 +21,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     private int sTexture;
 
     public WaterMarkRenderDrawer(Context context) {
-        mBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+        mBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher_round);
     }
     @Override
     public void setInputTextureId(int textureId) {
@@ -30,7 +30,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
 
     @Override
     public int getOutputTextureId() {
-        return mOutputTextureId;
+        return mInputTextureId;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
 
     @Override
     protected void onChanged(int width, int height) {
-        mOutputTextureId = GlesUtil.loadBitmapTexture(mBitmap);
+        mMarkTextureId = GlesUtil.loadBitmapTexture(mBitmap);
         avPosition = GLES20.glGetAttribLocation(mProgram, "av_Position");
         afPosition = GLES20.glGetAttribLocation(mProgram, "af_Position");
         sTexture = GLES20.glGetUniformLocation(mProgram, "sTexture");
@@ -50,7 +50,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     public void draw() {
         useProgram();
         //clear();
-        viewPort(50, height - mBitmap.getHeight() - 80, mBitmap.getWidth(), mBitmap.getHeight());
+        viewPort(80, 75, mBitmap.getWidth(), mBitmap.getHeight());
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_COLOR,GLES20.GL_DST_ALPHA);
@@ -68,7 +68,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
         GLES20.glVertexAttribPointer(afPosition, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mFrameTextureBuffer);
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mOutputTextureId);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mMarkTextureId);
         GLES20.glUniform1i(sTexture, 0);
         //绘制 GLES20.GL_TRIANGLE_STRIP:复用坐标
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);

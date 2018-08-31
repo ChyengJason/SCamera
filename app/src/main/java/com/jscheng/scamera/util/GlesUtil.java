@@ -69,13 +69,14 @@ public class GlesUtil {
     public static int createFrameBuffer() {
         int[] buffers = new int[1];
         GLES20.glGenFramebuffers(1, buffers, 0);
+        checkError();
         return buffers[0];
     }
 
     public static int createRenderBuffer() {
         int[] render = new int[1];
         GLES20.glGenRenderbuffers(1, render, 0);
-        GlesUtil.checkError();
+        checkError();
         return render[0];
     }
 

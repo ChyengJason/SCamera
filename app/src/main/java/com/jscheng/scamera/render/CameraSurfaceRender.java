@@ -15,26 +15,24 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
-    private BaseRenderDrawer mCameraDrawer;
-    private BaseRenderDrawer mTextureDrawer;
     private CameraSufaceRenderCallback mCallback;
-    private BaseRenderDrawer mWaterMarkDrawer;
+    private RenderDrawerGroups mRenderGroups;
 
     private int mCameraTextureId;
     private SurfaceTexture mCameraTexture;
 
     public CameraSurfaceRender(Context context) {
-        this.mCameraDrawer = new OriginalRenderDrawer();
-        this.mTextureDrawer = new DisplayRenderDrawer();
-        this.mWaterMarkDrawer = new WaterMarkRenderDrawer(context);
+        this.mRenderGroups = new RenderDrawerGroups();
+        mRenderGroups.addRenderDrawer(new OriginalRenderDrawer());
+        mRenderGroups.addRenderDrawer(new WaterMarkRenderDrawer(context));
+        mRenderGroups.addRenderDrawer(new DisplayRenderDrawer());
     }
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
         mCameraTextureId = GlesUtil.createCameraTexture();
-        mCameraDrawer.create();
-        mTextureDrawer.create();
-        mWaterMarkDrawer.create();
+        mRenderGroups.setInputTexture(mCameraTextureId);
+        mRenderGroups.create();
         initCameraTexture();
         if (mCallback != null) {
             mCallback.onCreate();
@@ -55,9 +53,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
-        mCameraDrawer.surfaceChangedSize(width, height);
-        mTextureDrawer.surfaceChangedSize(width, height);
-        mWaterMarkDrawer.surfaceChangedSize(width, height);
+        mRenderGroups.surfaceChangedSize(width, height);
         if (mCallback != null) {
             mCallback.onChanged(width, height);
         }
@@ -68,11 +64,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         if (mCameraTexture != null) {
             mCameraTexture.updateTexImage();
         }
-        mCameraDrawer.setInputTextureId(mCameraTextureId);
-        mCameraDrawer.draw();
-        mTextureDrawer.setInputTextureId(mCameraDrawer.getOutputTextureId());
-        mTextureDrawer.draw();
-        mWaterMarkDrawer.draw();
+        mRenderGroups.draw();
         if (mCallback != null) {
             mCallback.onDraw();
         }

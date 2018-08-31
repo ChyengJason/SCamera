@@ -1,15 +1,12 @@
 package com.jscheng.scamera.render;
 
 import android.opengl.GLES20;
-import android.util.Log;
 
 import com.jscheng.scamera.util.GlesUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-
-import static com.jscheng.scamera.util.LogUtil.TAG;
 
 /**
  * Created By Chengjunsen on 2018/8/27
@@ -30,13 +27,15 @@ public abstract class BaseRenderDrawer {
     //纹理坐标 Buffer
     protected FloatBuffer mBackTextureBuffer;
 
+    protected FloatBuffer mDisplayTextureBuffer;
+
     protected FloatBuffer mFrameTextureBuffer;
 
     protected float vertexData[] = {
-            -1f, -1f, 0.0f, // 左下角
-            1f, -1f, 0.0f, // 右下角
-            -1f, 1f, 0.0f, // 左上角
-            1f, 1f, 0.0f  // 右上角
+            -1f, -1f,// 左下角
+            1f, -1f, // 右下角
+            -1f, 1f, // 左上角
+            1f, 1f,  // 右上角
     };
 
     protected float frontTextureData[] = {
@@ -50,17 +49,24 @@ public abstract class BaseRenderDrawer {
             0f, 1f, // 左上角
             0f, 0f, //  左下角
             1f, 1f, // 右上角
-            1f, 0f // 右下角
+            1f, 0f  // 右上角
     };
 
-    protected float frameTextureData[] = {
-            0.0f, 1.0f,
-            1.0f, 1.0f,
-            0.0f, 0.0f,
-            1.0f, 0.0f
+    protected float displayTextureData[] = {
+            0f, 1f,
+            1f, 1f,
+            0f, 0f,
+            1f, 0f,
     };
 
-    protected final int CoordsPerVertexCount = 3;
+    protected float frameBufferData[] = {
+            0f, 0f,
+            1f, 0f,
+            0f, 1f,
+            1f, 1f
+    };
+
+    protected final int CoordsPerVertexCount = 2;
 
     protected final int VertexCount = vertexData.length / CoordsPerVertexCount;
 
@@ -122,10 +128,16 @@ public abstract class BaseRenderDrawer {
                 .put(frontTextureData);
         this.mFrontTextureBuffer.position(0);
 
-        this.mFrameTextureBuffer = ByteBuffer.allocateDirect(frameTextureData.length * 4)
+        this.mDisplayTextureBuffer = ByteBuffer.allocateDirect(displayTextureData.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
-                .put(frameTextureData);
+                .put(displayTextureData);
+        this.mDisplayTextureBuffer.position(0);
+
+        this.mFrameTextureBuffer = ByteBuffer.allocateDirect(frameBufferData.length * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .put(frameBufferData);
         this.mFrameTextureBuffer.position(0);
     }
 
