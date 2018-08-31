@@ -2,6 +2,7 @@ package com.jscheng.scamera.view;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -18,6 +19,8 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+
 import com.jscheng.scamera.R;
 import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
@@ -25,6 +28,8 @@ import com.jscheng.scamera.widget.CameraFocusView;
 import com.jscheng.scamera.widget.CameraGLSurfaceView;
 import com.jscheng.scamera.widget.CameraProgressButton;
 import com.jscheng.scamera.widget.CameraSwitchView;
+
+import java.nio.ByteBuffer;
 
 import static com.jscheng.scamera.util.LogUtil.TAG;
 
@@ -45,6 +50,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private CameraProgressButton mProgressBtn;
     private CameraFocusView mFocusView;
     private CameraSwitchView mSwitchView;
+    private ImageView mImageView;
     private boolean isFocusing;
     private Size mPreviewSize;
     private Handler mCameraHanlder;
@@ -65,6 +71,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         mProgressBtn = contentView.findViewById(R.id.progress_btn);
         mFocusView = contentView.findViewById(R.id.focus_view);
         mSwitchView = contentView.findViewById(R.id.switch_view);
+        mImageView = contentView.findViewById(R.id.image_view);
 
         mCameraSensor = new CameraSensor(getContext());
         mCameraSensor.setCameraSensorListener(this);
@@ -137,6 +144,24 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         Log.e(TAG, "surfaceChanged: ( " + width +" x " + height +" )");
         mPreviewSize = new Size(width, height);
         mCameraHanlder.sendEmptyMessage(MSG_START_PREVIEW);
+    }
+
+    @Override
+    public void onPhotoDataBack(final int width, final int height, final ByteBuffer mBuffer) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final Bitmap bitmap=Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                bitmap.copyPixelsFromBuffer(mBuffer);
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mImageView.setImageBitmap(bitmap);
+                        //bitmap.recycle();
+                    }
+                });
+            }
+        }).start();
     }
 
     public void startPreview() {
@@ -222,7 +247,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     @Override
     public void onShortPress() {
         if (requestStoragePermission()) {
-
+            mCameraView.takePhoto();
         }
     }
 

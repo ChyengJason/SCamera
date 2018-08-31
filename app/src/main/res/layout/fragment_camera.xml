@@ -59,4 +59,13 @@
         android:id="@+id/focus_view"
         android:layout_width="80dp"
         android:layout_height="80dp" />
+
+    <ImageView
+        android:id="@+id/image_view"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginRight="5dp"
+        android:layout_marginBottom="5dp"/>
 </RelativeLayout>
