@@ -21,7 +21,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     private int sTexture;
 
     public WaterMarkRenderDrawer(Context context) {
-        mBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher_round);
+        mBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.camera_ok);
     }
     @Override
     public void setInputTextureId(int textureId) {

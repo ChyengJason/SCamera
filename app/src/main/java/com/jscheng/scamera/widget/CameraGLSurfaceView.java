@@ -4,20 +4,13 @@ import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
-
 import com.jscheng.scamera.render.CameraSurfaceRender;
-
 import java.nio.ByteBuffer;
 
 /**
  * Created By Chengjunsen on 2018/8/25
  */
 public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceRender.CameraSufaceRenderCallback{
-
-    private static final int STATUS_STATIC = 1;
-    private static final int STATUS_PHOTO = 2;
-    private static final int STATUS_RECORD = 3;
-    private int mCameraStatus;
     private CameraSurfaceRender mRender;
     private CameraGLSurfaceViewCallback mCallback;
 
@@ -37,22 +30,6 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
         mRender.setCallback(this);
         this.setRenderer(mRender);
         this.setRenderMode(RENDERMODE_WHEN_DIRTY);
-        this.mCameraStatus = STATUS_STATIC;
-    }
-
-    public void takePhoto() {
-        mCameraStatus = STATUS_PHOTO;
-        mRender.setFrameDataBack(true);
-    }
-
-    public void cancel() {
-        mCameraStatus = STATUS_STATIC;
-        mRender.setFrameDataBack(false);
-    }
-
-    public void record() {
-        mCameraStatus = STATUS_RECORD;
-        mRender.setFrameDataBack(true);
     }
 
     public SurfaceTexture getSurfaceTexture() {
@@ -83,17 +60,6 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
 
     }
 
-    @Override
-    public void onFrameDataBack(int width, int height, ByteBuffer mBuffer) {
-        if (mCameraStatus == STATUS_PHOTO) {
-            mCameraStatus = STATUS_STATIC;
-            mRender.setFrameDataBack(false);
-            if (mCallback != null) {
-                mCallback.onPhotoDataBack(width, height, mBuffer);
-            }
-        }
-    }
-
     public void setCallback(CameraGLSurfaceViewCallback mCallback) {
         this.mCallback = mCallback;
     }
@@ -109,6 +75,5 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
     public interface CameraGLSurfaceViewCallback {
         void onSurfaceViewCreate(SurfaceTexture texture);
         void onSurfaceViewChange(int width, int height);
-        void onPhotoDataBack(int width, int height, ByteBuffer mBuffer);
     }
 }
