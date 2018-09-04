@@ -5,6 +5,9 @@ import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
 import com.jscheng.scamera.render.image.WaterMarkRenderDrawer;
 import com.jscheng.scamera.util.GlesUtil;
+
+import java.nio.ByteBuffer;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 /**
@@ -67,6 +70,9 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         if (mCallback != null) {
             mCallback.onDraw();
         }
+        if (mCallback != null && mRenderGroups.getByteBuffer() != null) {
+            mCallback.onFrame(width, height, mRenderGroups.getByteBuffer());
+        }
     }
 
     public SurfaceTexture getCameraSurfaceTexture() {
@@ -93,5 +99,6 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         void onCreate();
         void onChanged(int width, int height);
         void onDraw();
+        void onFrame(int width, int height, ByteBuffer buffer);
     }
 }

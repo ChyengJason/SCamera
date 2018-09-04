@@ -1,11 +1,14 @@
 package com.jscheng.scamera.render;
 
-import android.opengl.GLES11Ext;
-import android.opengl.GLES20;
+import android.annotation.SuppressLint;
+import android.opengl.GLES30;
 import android.util.Log;
 
 import com.jscheng.scamera.util.GlesUtil;
 
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,11 +22,19 @@ public class RenderDrawerGroups {
     public List<BaseRenderDrawer> mRenderDrawers;
     private int mInputTexture;
     private int mFrameBuffer;
+    private int[] mPixelBuffers;
+    private int mPboIndex;
+    private int mPboNewIndex;
+    private ByteBuffer byteBuffer;
 
     public RenderDrawerGroups() {
         mRenderDrawers = new ArrayList<>();
+        mPixelBuffers = new int[2];
         mFrameBuffer = 0;
         mInputTexture = 0;
+        mPboIndex = 0;
+        mPboNewIndex = 1;
+        byteBuffer = null;
     }
 
     public void addRenderDrawer(BaseRenderDrawer drawer) {
@@ -42,32 +53,65 @@ public class RenderDrawerGroups {
         this.mInputTexture = texture;
     }
 
+    @SuppressLint("NewApi")
+    public void bindPixelBuffer(int width, int height) {
+        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, mPixelBuffers[mPboIndex]);
+        // 读取到PBO中
+        long readPixelsTime = System.currentTimeMillis();
+        GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE,0);
+        Log.e(TAG, "bindPixelBuffer glReadPixels: " + (System.currentTimeMillis() - readPixelsTime ) );
+        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, mPixelBuffers[mPboNewIndex]);
+        // 映射到CPU内存中
+        long mapBufferRangeTime = System.currentTimeMillis();
+        byteBuffer = (ByteBuffer) GLES30.glMapBufferRange(GLES30.GL_PIXEL_PACK_BUFFER, 0, width * height * 4, GLES30.GL_MAP_READ_BIT);
+        Log.e(TAG, "bindPixelBuffer glMapBufferRange: " + (System.currentTimeMillis() - mapBufferRangeTime) );
+        GLES30.glUnmapBuffer(GLES30.GL_PIXEL_PACK_BUFFER);
+        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, 0);
+        mPboIndex = (mPboIndex + 1) % mPixelBuffers.length;
+        mPboNewIndex = (mPboNewIndex + 1) % mPixelBuffers.length;
+    }
+
     public void bindFrameBuffer(int textureId) {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffer);
-        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, textureId, 0);
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, mFrameBuffer);
+        GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, textureId, 0);
     }
 
     public void unBindFrameBuffer() {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
     }
 
     public void deleteFrameBuffer() {
-//        GLES20.glDeleteRenderbuffers(1, new int[]{mFrameRender}, 0);
-        GLES20.glDeleteFramebuffers(1, new int[]{mFrameBuffer}, 0);
-        GLES20.glDeleteTextures(1, new int[]{mInputTexture}, 0);
+        GLES30.glDeleteFramebuffers(1, new int[]{mFrameBuffer}, 0);
+        GLES30.glDeleteTextures(1, new int[]{mInputTexture}, 0);
     }
 
     public void create() {
-        mFrameBuffer = GlesUtil.createFrameBuffer();
         for (BaseRenderDrawer drawer : mRenderDrawers) {
             drawer.create();
         }
     }
 
     public void surfaceChangedSize(int width, int height) {
+        mFrameBuffer = GlesUtil.createFrameBuffer();
+        GlesUtil.createPixelsBuffers(mPixelBuffers, width, height);
         for (BaseRenderDrawer drawer : mRenderDrawers) {
             drawer.surfaceChangedSize(width, height);
         }
+    }
+
+    public int drawRender(BaseRenderDrawer drawer, boolean useFrameBuffer, int inputTexture, boolean readPixles) {
+        drawer.setInputTextureId(inputTexture);
+        if (useFrameBuffer) {
+            bindFrameBuffer(drawer.getOutputTextureId());
+        }
+        drawer.draw();
+        if (readPixles) {
+            bindPixelBuffer(drawer.width, drawer.height);
+        }
+        if (useFrameBuffer) {
+            unBindFrameBuffer();
+        }
+        return drawer.getOutputTextureId();
     }
 
     public void draw() {
@@ -76,22 +120,21 @@ public class RenderDrawerGroups {
             return;
         }
         BaseRenderDrawer currentRender = null;
-        BaseRenderDrawer lastRender;
+        int inputTexture = mInputTexture;
+        int outputTexture = 0;
         for (int i = 0; i < mRenderDrawers.size(); i++) {
-            lastRender = currentRender;
             currentRender = mRenderDrawers.get(i);
-            if (lastRender == null) {
-                currentRender.setInputTextureId(mInputTexture);
+            if (i != mRenderDrawers.size() - 1) {
+                outputTexture = drawRender(currentRender, true, inputTexture, false);
             } else {
-                currentRender.setInputTextureId(lastRender.getOutputTextureId());
+                outputTexture = drawRender(currentRender, false, inputTexture, true);
             }
-            if (i != mRenderDrawers.size()-1) {
-                bindFrameBuffer(currentRender.getOutputTextureId());
-                currentRender.draw();
-                unBindFrameBuffer();
-            } else {
-                currentRender.draw();
-            }
+            inputTexture = outputTexture;
         }
     }
+
+    public ByteBuffer getByteBuffer() {
+        return byteBuffer;
+    }
+
 }

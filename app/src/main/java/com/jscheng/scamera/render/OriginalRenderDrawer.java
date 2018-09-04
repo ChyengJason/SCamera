@@ -2,7 +2,7 @@ package com.jscheng.scamera.render;
 
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
-import android.opengl.GLES20;
+import android.opengl.GLES30;
 
 import com.jscheng.scamera.render.BaseRenderDrawer;
 import com.jscheng.scamera.util.CameraUtil;
@@ -26,9 +26,9 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
     protected void onChanged(int width, int height) {
         mOutputTextureId = GlesUtil.createFrameTexture(width, height);
 
-        av_Position = GLES20.glGetAttribLocation(mProgram, "av_Position");
-        af_Position = GLES20.glGetAttribLocation(mProgram, "af_Position");
-        s_Texture = GLES20.glGetUniformLocation(mProgram, "s_Texture");
+        av_Position = GLES30.glGetAttribLocation(mProgram, "av_Position");
+        af_Position = GLES30.glGetAttribLocation(mProgram, "af_Position");
+        s_Texture = GLES30.glGetUniformLocation(mProgram, "s_Texture");
     }
 
     @Override
@@ -36,29 +36,29 @@ public class OriginalRenderDrawer extends BaseRenderDrawer {
         if (mInputTextureId == 0 || mOutputTextureId == 0) {
             return;
         }
-        GLES20.glEnableVertexAttribArray(av_Position);
-        GLES20.glEnableVertexAttribArray(af_Position);
-        GLES20.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES20.GL_FLOAT, false, VertexStride, mVertexBuffer);
+        GLES30.glEnableVertexAttribArray(av_Position);
+        GLES30.glEnableVertexAttribArray(af_Position);
+        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
         if (CameraUtil.isBackCamera()) {
-            GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mBackTextureBuffer);
+            GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mBackTextureBuffer);
         } else {
-            GLES20.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES20.GL_FLOAT, false, TextureStride, mFrontTextureBuffer);
+            GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mFrontTextureBuffer);
         }
         bindTexture(mInputTextureId);
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, VertexCount);
+        GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, VertexCount);
         unBindTexure();
-        GLES20.glDisableVertexAttribArray(av_Position);
-        GLES20.glDisableVertexAttribArray(af_Position);
+        GLES30.glDisableVertexAttribArray(av_Position);
+        GLES30.glDisableVertexAttribArray(af_Position);
     }
 
     private void bindTexture(int textureId) {
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId);
-        GLES20.glUniform1i(s_Texture, 0);
+        GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
+        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId);
+        GLES30.glUniform1i(s_Texture, 0);
     }
 
     private void unBindTexure() {
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
     }
 
     @Override

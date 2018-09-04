@@ -3,29 +3,27 @@ package com.jscheng.scamera.view;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.jscheng.scamera.R;
-import com.jscheng.scamera.record.VideoCodec;
 import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
 import com.jscheng.scamera.widget.CameraFocusView;
@@ -33,8 +31,9 @@ import com.jscheng.scamera.widget.CameraGLSurfaceView;
 import com.jscheng.scamera.widget.CameraProgressButton;
 import com.jscheng.scamera.widget.CameraSwitchView;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.jscheng.scamera.util.LogUtil.TAG;
 
@@ -59,7 +58,8 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private boolean isFocusing;
     private Size mPreviewSize;
     private Handler mCameraHanlder;
-    private VideoCodec mCodec;
+    private ExecutorService singleThreadExecutor;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View contentView = inflater.inflate(R.layout.fragment_camera, container, false);
@@ -71,7 +71,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private void initView(View contentView) {
         isFocusing = false;
         mPreviewSize = null;
-
+        singleThreadExecutor  = Executors.newSingleThreadExecutor();
         mCameraView = contentView.findViewById(R.id.camera_view);
         mProgressBtn = contentView.findViewById(R.id.progress_btn);
         mFocusView = contentView.findViewById(R.id.focus_view);
@@ -149,6 +149,23 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         Log.e(TAG, "surfaceChanged: ( " + width +" x " + height +" )");
         mPreviewSize = new Size(width, height);
         mCameraHanlder.sendEmptyMessage(MSG_START_PREVIEW);
+    }
+
+    @Override
+    public void onSurfaceViewFrame(final int width, final int height, final ByteBuffer buffer) {
+        singleThreadExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final Bitmap bitmap=Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                bitmap.copyPixelsFromBuffer(buffer);
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mImageView.setImageBitmap(bitmap);
+                    }
+                });
+            }
+        });
     }
 
     public void startPreview() {
@@ -240,22 +257,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @SuppressLint("NewApi")
     private void takePicture() {
-        try {
-            if (mCodec == null) {
-                mCodec = new VideoCodec();
-            }
-            Surface surface = new Surface(mCameraView.getSurfaceTexture());
-            mCodec.prepare(surface, mCameraView.getWidth(), mCameraView.getHeight());
-            mCodec.start();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    mCodec.encode();
-                }
-            }).start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
     }
 
     @Override

@@ -1,6 +1,6 @@
 package com.jscheng.scamera.render;
 
-import android.opengl.GLES20;
+import android.opengl.GLES30;
 
 import com.jscheng.scamera.util.GlesUtil;
 
@@ -99,14 +99,14 @@ public abstract class BaseRenderDrawer {
     }
 
     protected void clear(){
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+        GLES30.glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
     }
 
 //    protected void bindTexture(int type){
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + type);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D , mTextureId);
-//        GLES20.glUniform1i(mHTexture, type);
+//        GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + type);
+//        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D , mTextureId);
+//        GLES30.glUniform1i(mHTexture, type);
 //    }
 
     protected void initBuffer() {
@@ -142,21 +142,21 @@ public abstract class BaseRenderDrawer {
     }
 
     protected void useProgram(){
-        GLES20.glUseProgram(mProgram);
+        GLES30.glUseProgram(mProgram);
     }
 
     protected void viewPort(int x, int y, int width, int height) {
-        GLES20.glViewport(x, y, width,  height);
+        GLES30.glViewport(x, y, width,  height);
     }
 
 //    protected void draw(){
-//        GLES20.glEnableVertexAttribArray(mHPosition);
-//        GLES20.glVertexAttribPointer(mHPosition,2, GLES20.GL_FLOAT, false, 0, mVerBuffer);
-//        GLES20.glEnableVertexAttribArray(mHCoord);
-//        GLES20.glVertexAttribPointer(mHCoord, 2, GLES20.GL_FLOAT, false, 0, mTexBuffer);
-//        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP,0,);
-//        GLES20.glDisableVertexAttribArray(mHPosition);
-//        GLES20.glDisableVertexAttribArray(mHCoord);
+//        GLES30.glEnableVertexAttribArray(mHPosition);
+//        GLES30.glVertexAttribPointer(mHPosition,2, GLES30.GL_FLOAT, false, 0, mVerBuffer);
+//        GLES30.glEnableVertexAttribArray(mHCoord);
+//        GLES30.glVertexAttribPointer(mHCoord, 2, GLES30.GL_FLOAT, false, 0, mTexBuffer);
+//        GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP,0,);
+//        GLES30.glDisableVertexAttribArray(mHPosition);
+//        GLES30.glDisableVertexAttribArray(mHCoord);
 //    }
 
 

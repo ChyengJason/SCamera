@@ -24,7 +24,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
     }
 
     private void init(Context context) {
-        setEGLContextClientVersion(2);
+        setEGLContextClientVersion(3);
         setDebugFlags(GLSurfaceView.DEBUG_CHECK_GL_ERROR);
         mRender = new CameraSurfaceRender(context);
         mRender.setCallback(this);
@@ -60,6 +60,13 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
 
     }
 
+    @Override
+    public void onFrame(int width, int height, ByteBuffer buffer) {
+        if (mCallback != null) {
+            mCallback.onSurfaceViewFrame(width, height, buffer);
+        }
+    }
+
     public void setCallback(CameraGLSurfaceViewCallback mCallback) {
         this.mCallback = mCallback;
     }
@@ -75,5 +82,6 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
     public interface CameraGLSurfaceViewCallback {
         void onSurfaceViewCreate(SurfaceTexture texture);
         void onSurfaceViewChange(int width, int height);
+        void onSurfaceViewFrame(int width, int height, ByteBuffer buffer);
     }
 }
