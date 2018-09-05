@@ -116,10 +116,15 @@ public class CameraUtil {
             Camera.Size bestPictureSize = getOptimalSize(parameters.getSupportedPictureSizes(), width, height);
             parameters.setPictureSize(bestPictureSize.width, bestPictureSize.height);
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+            parameters.setPreviewFormat(ImageFormat.NV21);
             mCamera.setParameters(parameters);
             mCamera.setDisplayOrientation(mOrientation);
             mCamera.startPreview();
         }
+    }
+
+    public static void setPreviewCallback(Camera.PreviewCallback callback) {
+        mCamera.setPreviewCallback(callback);
     }
 
     /**

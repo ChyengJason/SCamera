@@ -1,6 +1,7 @@
 package com.jscheng.scamera.view;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.graphics.SurfaceTexture;
@@ -9,6 +10,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -16,8 +18,11 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import com.jscheng.scamera.R;
+import com.jscheng.scamera.record.CameraRecorder;
 import com.jscheng.scamera.util.CameraUtil;
+import com.jscheng.scamera.util.ImageUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
+import com.jscheng.scamera.util.StorageUtil;
 import com.jscheng.scamera.widget.CameraFocusView;
 import com.jscheng.scamera.widget.CameraProgressButton;
 import com.jscheng.scamera.widget.CameraSwitchView;
@@ -25,7 +30,7 @@ import com.jscheng.scamera.widget.CameraSwitchView;
 /**
  * Created By Chengjunsen on 2018/8/22
  */
-public class CameraFragment extends Fragment implements CameraProgressButton.Listener, TextureView.SurfaceTextureListener, CameraSensor.CameraSensorListener{
+public class CameraFragment extends Fragment implements CameraProgressButton.Listener, TextureView.SurfaceTextureListener, CameraSensor.CameraSensorListener, Camera.PreviewCallback{
     private final static String TAG = CameraFragment.class.getSimpleName();
     private final static int CAMERA_REQUEST_CODE = 1;
     private final static int STORE_REQUEST_CODE = 2;
@@ -38,6 +43,9 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     // 是否正在对焦
     private boolean isFocusing;
     private Size mPreviewSize = null;
+    private boolean isTakePhoto;
+    private boolean isRecording;
+    private CameraRecorder mCameraRecorder;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -48,6 +56,8 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     private void initView(View contentView) {
         isFocusing = false;
+        isTakePhoto = false;
+        isRecording = false;
 
         mCameraView = contentView.findViewById(R.id.camera_view);
         mProgressBtn = contentView.findViewById(R.id.progress_btn);
@@ -124,6 +134,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             }
             if (mPreviewSize != null) {
                 CameraUtil.startPreview(getActivity(), mCameraView.getSurfaceTexture(), mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                CameraUtil.setPreviewCallback(this);
                 mCameraSensor.start();
                 mSwitchView.setOrientation(mCameraSensor.getX(), mCameraSensor.getY(), mCameraSensor.getZ());
             }
@@ -151,23 +162,25 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     @Override
     public void onShortPress() {
         if (requestStoragePermission()) {
-
+            takePicture();
         }
     }
 
     @Override
     public void onStartLongPress() {
         if (requestStoragePermission()) {
-
+            beginRecord();
         }
     }
 
     @Override
     public void onEndLongPress() {
+        endRecord();
     }
 
     @Override
     public void onEndMaxProgress() {
+        endRecord();
     }
 
     private boolean requestCameraPermission() {
@@ -216,5 +229,39 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         if (requestCode == CAMERA_REQUEST_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startPreview();
         }
+    }
+
+    public void takePicture() {
+        isTakePhoto = true;
+    }
+
+    @Override
+    public void onPreviewFrame(byte[] bytes, Camera camera) {
+        if (isTakePhoto){
+            String dirPath = StorageUtil.getImagePath();
+            StorageUtil.checkDirExist(dirPath);
+            boolean result = ImageUtil.saveNV21(bytes, mPreviewSize.getWidth(), mPreviewSize.getHeight(), dirPath + "image.jpg");
+            isTakePhoto = false;
+            if (result) {
+                Intent intent = new Intent(getContext(), ImageActivity.class);
+                intent.putExtra("path", dirPath + "image.jpg");
+                startActivity(intent);
+            }
+        } else if (isRecording) {
+            mCameraRecorder.push(bytes);
+        }
+    }
+
+    private void beginRecord() {
+        if (mPreviewSize != null) {
+            mCameraRecorder = new CameraRecorder(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            isRecording = true;
+            mCameraRecorder.start();
+        }
+    }
+
+    private void endRecord() {
+        isRecording = false;
+        mCameraRecorder.end();
     }
 }
