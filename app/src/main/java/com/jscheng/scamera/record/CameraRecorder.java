@@ -2,11 +2,17 @@ package com.jscheng.scamera.record;
 
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.util.Log;
 
+import com.jscheng.scamera.util.StorageUtil;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -21,33 +27,92 @@ public class CameraRecorder implements Runnable {
     private int mBitRate = 500000;
     private int mIFrameInterval = 1;
 
+    private HashMap<String, MediaCodecInfo.CodecCapabilities> mEncoderInfos;
     private long generateIndex = 0;
     private Queue<byte[]> dataQueue;
     private Thread mRecordThread;
     private boolean isRecording;
     private MediaCodec mMediaCodec;
     private MediaCodec.BufferInfo mBufferInfo;
-    private byte[] mMediaConfigBytes;
+    private FileOutputStream mVideoFile;
 
     public CameraRecorder(int width, int heigth) {
         dataQueue = new LinkedBlockingQueue<>();
         mRecordThread = new Thread(this);
         isRecording = false;
         initMediaCodec(width, heigth);
+        initVideoFile();
     }
 
     private void initMediaCodec(int width, int height) {
         try {
+            String mime = MediaFormat.MIMETYPE_VIDEO_AVC;
+            int colorFormat = selectColorFormat(selectCodec(mime), mime);
+            Log.e(TAG,"setupEncoder " + mime + " colorFormat:" + colorFormat + " w:" + width + " h:" + height);
+
             mBufferInfo = new MediaCodec.BufferInfo();
-            mMediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
-            MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", width, height);
-            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+            mMediaCodec = MediaCodec.createEncoderByType(mime);
+            MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, width, height);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
             mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mBitRate);
             mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mFrameRate);
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval);
             mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void initVideoFile() {
+        try {
+            String path = StorageUtil.getVedioPath();
+            StorageUtil.checkDirExist(path);
+            mVideoFile = new FileOutputStream(path + "vedio.mp4");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static MediaCodecInfo selectCodec(String mimeType) {
+        int numCodecs = MediaCodecList.getCodecCount();
+        for (int i = 0; i < numCodecs; i++) {
+            MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i);
+            if (!codecInfo.isEncoder()) {
+                continue;
+            }
+            String[] types = codecInfo.getSupportedTypes();
+            for (int j = 0; j < types.length; j++) {
+                if (types[j].equalsIgnoreCase(mimeType)) {
+                    return codecInfo;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static int selectColorFormat(MediaCodecInfo codecInfo, String mimeType) {
+        MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
+        for (int i = 0; i < capabilities.colorFormats.length; i++) {
+            int colorFormat = capabilities.colorFormats[i];
+            if (isRecognizedFormat(colorFormat)) {
+                return colorFormat;
+            }
+        }
+        Log.e(TAG,"couldn't find a good color format for " + codecInfo.getName() + " / " + mimeType);
+        return 0;   // not reached
+    }
+
+    private static boolean isRecognizedFormat(int colorFormat) {
+        switch (colorFormat) {
+            // these are the formats we know how to handle for this test
+            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
+            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar:
+            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
+            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar:
+            case MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -109,34 +174,27 @@ public class CameraRecorder implements Runnable {
         }
         int outputIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_S);
         while(outputIndex > 0) {
-            ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(outputIndex);
-            byte[] outputData = new byte[mBufferInfo.size];
-            outputBuffer.get(outputData);
-            if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) !=0) { // 配置
-                Log.e(TAG, "encode: BUFFER_FLAG_CODEC_CONFIG");
-                mMediaConfigBytes = new byte[outputData.length];
-                mMediaConfigBytes = outputData;
-            } else if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) !=0) { // 关键帧
-                Log.e(TAG, "encode: BUFFER_FLAG_KEY_FRAME");
-                if (mMediaConfigBytes != null) {
-                    byte[] keyframe = new byte[mBufferInfo.size + mMediaConfigBytes.length];
-                    System.arraycopy(mMediaConfigBytes, 0, keyframe, 0, mMediaConfigBytes.length);
-                    System.arraycopy(outputData, 0, keyframe, mMediaConfigBytes.length, outputData.length);
-                }
-            } else if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_PARTIAL_FRAME) !=0){
-                Log.e(TAG, "encode: BUFFER_FLAG_PARTIAL_FRAME");
-            } else if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) !=0){
-                Log.e(TAG, "encode: BUFFER_FLAG_END_OF_STREAM");
-            } else {
-                Log.e(TAG, "encode: other " + mBufferInfo.flags);
+            try {
+                ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(outputIndex);
+                byte[] outputData = new byte[mBufferInfo.size];
+                outputBuffer.get(outputData);
+                mVideoFile.write(outputData);
+                mMediaCodec.releaseOutputBuffer(outputIndex, false);
+                outputIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_S);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            mMediaCodec.releaseOutputBuffer(outputIndex, false);
-            outputIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_S);
         }
-     }
+    }
 
     private void endEncode() {
         mMediaCodec.stop();
+        try {
+            mVideoFile.flush();
+            mVideoFile.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private long computePresentationTime(long frameIndex) {

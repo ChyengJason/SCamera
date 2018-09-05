@@ -124,7 +124,9 @@ public class CameraUtil {
     }
 
     public static void setPreviewCallback(Camera.PreviewCallback callback) {
-        mCamera.setPreviewCallback(callback);
+        if (mCamera != null) {
+            mCamera.setPreviewCallback(callback);
+        }
     }
 
     /**
