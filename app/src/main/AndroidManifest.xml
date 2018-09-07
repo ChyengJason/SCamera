@@ -22,6 +22,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".view.ImageActivity"></activity>
+        <activity android:name=".view.VideoActivity"></activity>
     </application>
 
 </manifest>

@@ -142,6 +142,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     }
 
     public void releasePreview() {
+        CameraUtil.setPreviewCallback(null);
         CameraUtil.releaseCamera();
         mCameraSensor.stop();
         mFocusView.cancelFocus();
@@ -248,20 +249,28 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
                 startActivity(intent);
             }
         } else if (isRecording) {
-            mCameraRecorder.push(bytes);
+            mCameraRecorder.putData(bytes);
         }
     }
 
     private void beginRecord() {
         if (mPreviewSize != null) {
-            mCameraRecorder = new CameraRecorder(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            String dirPath = StorageUtil.getVedioPath();
+            StorageUtil.checkDirExist(dirPath);
+            mCameraRecorder = new CameraRecorder(1280, 720, dirPath + "test.h264");
             isRecording = true;
-            mCameraRecorder.start();
+            mCameraRecorder.startEncoder();
         }
     }
 
     private void endRecord() {
-        isRecording = false;
-        mCameraRecorder.end();
+        if (isRecording) {
+            isRecording = false;
+            mCameraRecorder.stopEncoder();
+            String path = StorageUtil.getVedioPath() + "test.h264";
+            Intent intent = new Intent(getContext(), VideoActivity.class);
+            intent.putExtra("path", path);
+            startActivity(intent);
+        }
     }
 }

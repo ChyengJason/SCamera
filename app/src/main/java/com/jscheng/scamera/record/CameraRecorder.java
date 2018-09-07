@@ -2,202 +2,183 @@ package com.jscheng.scamera.record;
 
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.util.Log;
-
-import com.jscheng.scamera.util.StorageUtil;
-
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
-
+import java.util.concurrent.LinkedBlockingDeque;
 import static android.content.ContentValues.TAG;
 
 /**
  * Created By Chengjunsen on 2018/9/5
  */
 public class CameraRecorder implements Runnable {
-    private static final int TIMEOUT_S = 10000;
+    private static final int TIMEOUT_S = 12000;
     private int mFrameRate = 30;
     private int mBitRate = 500000;
     private int mIFrameInterval = 1;
-
-    private HashMap<String, MediaCodecInfo.CodecCapabilities> mEncoderInfos;
     private long generateIndex = 0;
-    private Queue<byte[]> dataQueue;
-    private Thread mRecordThread;
+    public Queue<byte[]> dataQueue;
     private boolean isRecording;
     private MediaCodec mMediaCodec;
-    private MediaCodec.BufferInfo mBufferInfo;
     private FileOutputStream mVideoFile;
+    private int width, height;
+    public byte[] configbyte;
 
-    public CameraRecorder(int width, int heigth) {
-        dataQueue = new LinkedBlockingQueue<>();
-        mRecordThread = new Thread(this);
-        isRecording = false;
-        initMediaCodec(width, heigth);
-        initVideoFile();
+    public CameraRecorder(int width, int height, String path) {
+        this.width = width;
+        this.height= height;
+        this.dataQueue =new LinkedBlockingDeque<>();
+        this.isRecording = false;
+        initMediaCodec(width, height);
+        initVideoFile(path);
     }
 
     private void initMediaCodec(int width, int height) {
         try {
-            String mime = MediaFormat.MIMETYPE_VIDEO_AVC;
-            int colorFormat = selectColorFormat(selectCodec(mime), mime);
-            Log.e(TAG,"setupEncoder " + mime + " colorFormat:" + colorFormat + " w:" + width + " h:" + height);
-
-            mBufferInfo = new MediaCodec.BufferInfo();
-            mMediaCodec = MediaCodec.createEncoderByType(mime);
-            MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, width, height);
-            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
-            mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mBitRate);
-            mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mFrameRate);
-            mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval);
+            MediaFormat mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+            mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
+            mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 30);
+            mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+            mMediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
             mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void initVideoFile() {
+    private void initVideoFile(String path) {
         try {
-            String path = StorageUtil.getVedioPath();
-            StorageUtil.checkDirExist(path);
-            mVideoFile = new FileOutputStream(path + "vedio.mp4");
+            mVideoFile = new FileOutputStream(path);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
     }
 
-    private static MediaCodecInfo selectCodec(String mimeType) {
-        int numCodecs = MediaCodecList.getCodecCount();
-        for (int i = 0; i < numCodecs; i++) {
-            MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i);
-            if (!codecInfo.isEncoder()) {
-                continue;
-            }
-            String[] types = codecInfo.getSupportedTypes();
-            for (int j = 0; j < types.length; j++) {
-                if (types[j].equalsIgnoreCase(mimeType)) {
-                    return codecInfo;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static int selectColorFormat(MediaCodecInfo codecInfo, String mimeType) {
-        MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
-        for (int i = 0; i < capabilities.colorFormats.length; i++) {
-            int colorFormat = capabilities.colorFormats[i];
-            if (isRecognizedFormat(colorFormat)) {
-                return colorFormat;
-            }
-        }
-        Log.e(TAG,"couldn't find a good color format for " + codecInfo.getName() + " / " + mimeType);
-        return 0;   // not reached
-    }
-
-    private static boolean isRecognizedFormat(int colorFormat) {
-        switch (colorFormat) {
-            // these are the formats we know how to handle for this test
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar:
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar:
-            case MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    public synchronized void start() {
+    public synchronized void startEncoder() {
         isRecording = true;
         dataQueue.clear();
-        mRecordThread.start();
-        startEncode();
+        generateIndex = 0;
+        mMediaCodec.start();
+        new Thread(this).start();
     }
 
-    public synchronized void end() {
+    public synchronized void stopEncoder() {
         isRecording = false;
         notifyAll();
-        endEncode();
     }
 
-    public synchronized void push(byte[] data) {
-        dataQueue.offer(data);
+    public synchronized void putData(byte[] data) {
+        if (isRecording) {
+            if (dataQueue.size() >= 10) {
+                dataQueue.poll();
+            }
+            dataQueue.add(data);
+        }
         notifyAll();
+    }
+
+    private void encode(byte[] input) {
+        if (input != null) {
+            try {
+                int inputBufferIndex = mMediaCodec.dequeueInputBuffer(TIMEOUT_S);
+                if (inputBufferIndex >= 0) {
+                    long pts = computePresentationTime(generateIndex);
+                    ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
+                    inputBuffer.clear();
+                    inputBuffer.put(input);
+                    mMediaCodec.queueInputBuffer(inputBufferIndex, 0, input.length, pts, 0);
+                    generateIndex += 1;
+                }
+
+                MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+                int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_S);
+                while (outputBufferIndex >= 0) {
+                    ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(outputBufferIndex);
+                    byte[] outData = new byte[bufferInfo.size];
+                    outputBuffer.get(outData);
+                    if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
+                        Log.e(TAG, "run: BUFFER_FLAG_CODEC_CONFIG" );
+                        configbyte = new byte[bufferInfo.size];
+                        configbyte = outData;
+                    } else if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_KEY_FRAME) {
+                        Log.e(TAG, "run: BUFFER_FLAG_KEY_FRAME" );
+                        byte[] keyframe = new byte[bufferInfo.size + configbyte.length];
+                        System.arraycopy(configbyte, 0, keyframe, 0, configbyte.length);
+                        System.arraycopy(outData, 0, keyframe, configbyte.length, outData.length);
+                        mVideoFile.write(keyframe, 0, keyframe.length);
+                    } else {
+                        mVideoFile.write(outData, 0, outData.length);
+                    }
+
+                    mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
+                    outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_S);
+                }
+
+            } catch (Throwable t) {
+                t.printStackTrace();
+                Log.e(TAG, "encode: "+t.toString() );
+            }
+        }
+    }
+
+    private long computePresentationTime(long frameIndex) {
+        return 132 + frameIndex * 1000000 / mFrameRate;
+    }
+
+    private void NV21ToNV12(byte[] nv21, byte[] nv12, int width, int height) {
+        if (nv21 == null || nv12 == null) {
+            return;
+        }
+        int framesize = width * height;
+        int i = 0, j = 0;
+        System.arraycopy(nv21, 0, nv12, 0, framesize);
+        for (i = 0; i < framesize; i++) {
+            nv12[i] = nv21[i];
+        }
+        for (j = 0; j < framesize / 2; j += 2) {
+            nv12[framesize + j - 1] = nv21[j + framesize];
+        }
+        for (j = 0; j < framesize / 2; j += 2) {
+            nv12[framesize + j] = nv21[j + framesize - 1];
+        }
     }
 
     @Override
     public synchronized void run() {
-        while (true) {
-            if (dataQueue.isEmpty()) {
+        while (isRecording) {
+            byte[] data = dataQueue.poll();
+            if (data != null) {
+                byte[] yuv420sp = new byte[width * height * 3 / 2];
+                // 必须要转格式，否则录制的内容播放出来为绿屏
+                NV21ToNV12(data, yuv420sp, width, height);
+                encode(yuv420sp);
+            } else {
                 try {
                     wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-            if (!isRecording) {
-                break;
-            }
-            byte[] data = dataQueue.poll();
-            if (data != null) {
-                encode(data);
-            }
         }
-    }
-
-    private void startEncode() {
-        mMediaCodec.start();
-        generateIndex = 0;
-    }
-
-    private void encode(byte[] bytes) {
-        int inputIndex = mMediaCodec.dequeueInputBuffer(TIMEOUT_S);
-        if (inputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-            Log.e(TAG, "encode: INFO_OUTPUT_FORMAT_CHANGED");
-        } else if(inputIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-            Log.e(TAG, "encode: INFO_TRY_AGAIN_LATER");
-        } else if (inputIndex > 0) {
-            long pts = computePresentationTime(generateIndex++);
-            ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputIndex);
-            inputBuffer.clear();
-            inputBuffer.put(bytes);
-            mMediaCodec.queueInputBuffer(inputIndex, 0, bytes.length, pts, 0);
+        // 停止编解码器并释放资源
+        try {
+            mMediaCodec.stop();
+            mMediaCodec.release();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        int outputIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_S);
-        while(outputIndex > 0) {
-            try {
-                ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(outputIndex);
-                byte[] outputData = new byte[mBufferInfo.size];
-                outputBuffer.get(outputData);
-                mVideoFile.write(outputData);
-                mMediaCodec.releaseOutputBuffer(outputIndex, false);
-                outputIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_S);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
-    private void endEncode() {
-        mMediaCodec.stop();
+        // 关闭数据流
         try {
             mVideoFile.flush();
             mVideoFile.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private long computePresentationTime(long frameIndex) {
-        return 132 + frameIndex * 1000000 / mFrameRate;
     }
 }
