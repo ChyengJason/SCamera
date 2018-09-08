@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -19,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import com.jscheng.scamera.R;
 import com.jscheng.scamera.record.CameraRecorder;
+import com.jscheng.scamera.record.MutexThread;
 import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.ImageUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
@@ -45,7 +45,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private Size mPreviewSize = null;
     private boolean isTakePhoto;
     private boolean isRecording;
-    private CameraRecorder mCameraRecorder;
+    private MutexThread mMediaMutex;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -162,14 +162,14 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onShortPress() {
-        if (requestStoragePermission()) {
+        if (requestStoragePermission() && requestAudioPermission()) {
             takePicture();
         }
     }
 
     @Override
     public void onStartLongPress() {
-        if (requestStoragePermission()) {
+        if (requestStoragePermission() && requestAudioPermission()) {
             beginRecord();
         }
     }
@@ -190,6 +190,10 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     private boolean requestStoragePermission() {
         return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.STORAGE, STORE_REQUEST_CODE, "请求访问SD卡权限被拒绝");
+    }
+
+    private boolean requestAudioPermission() {
+        return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.MICROPHONE, STORE_REQUEST_CODE, "请求访问SD卡权限被拒绝");
     }
 
     private void focus(final int x, final int y, final boolean isAutoFocus) {
@@ -249,7 +253,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
                 startActivity(intent);
             }
         } else if (isRecording) {
-            mCameraRecorder.putData(bytes);
+            mMediaMutex.frame(bytes);
         }
     }
 
@@ -257,20 +261,20 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         if (mPreviewSize != null) {
             String dirPath = StorageUtil.getVedioPath();
             StorageUtil.checkDirExist(dirPath);
-            mCameraRecorder = new CameraRecorder(1280, 720, dirPath + "test.h264");
+            mMediaMutex = new MutexThread(dirPath + "test.mp4");
             isRecording = true;
-            mCameraRecorder.startEncoder();
+            mMediaMutex.start();
         }
     }
 
     private void endRecord() {
         if (isRecording) {
             isRecording = false;
-            mCameraRecorder.stopEncoder();
-            String path = StorageUtil.getVedioPath() + "test.h264";
-            Intent intent = new Intent(getContext(), VideoActivity.class);
-            intent.putExtra("path", path);
-            startActivity(intent);
+            mMediaMutex.stop();
+//            String path = StorageUtil.getVedioPath() + "test.mp4";
+//            Intent intent = new Intent(getContext(), VideoActivity.class);
+//            intent.putExtra("path", path);
+//            startActivity(intent);
         }
     }
 }
