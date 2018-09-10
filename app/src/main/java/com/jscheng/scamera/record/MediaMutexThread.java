@@ -11,7 +11,7 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
 /**
  * Created By Chengjunsen on 2018/9/8
  */
-public class MediaMutexThread implements Runnable{
+public class MediaMutexThread extends Thread implements Runnable{
     private Queue<MutexBean> mMutexBeanQueue;
     private boolean isRecording;
     private AudioRecordThread mAudioThread;
@@ -26,7 +26,7 @@ public class MediaMutexThread implements Runnable{
         this.isRecording = false;
         this.isMediaMuxerStart = false;
         this.path = path;
-        this.mMutexBeanQueue = new ArrayBlockingQueue<>(20);
+        this.mMutexBeanQueue = new ArrayBlockingQueue(100);
         this.mAudioThread = new AudioRecordThread(this);
         this.mVideoThread = new VideoRecordThread(this, 1280, 720);
     }
@@ -42,6 +42,15 @@ public class MediaMutexThread implements Runnable{
         }
     }
 
+    private void startMediaMutex() {
+        if (!isMediaMuxerStart && isVideoTrackExist() && isAudioTrackExist()){
+            Log.e(TAG, "run: MediaMuxerStart");
+            mMediaMuxer.start();
+            isMediaMuxerStart = true;
+            start();
+        }
+    }
+
     public void addAudioTrack(MediaFormat mediaFormat) {
         if (mMediaMuxer == null) {
             Log.e(TAG, "addAudioTrack: mMediaMuxer is null");
@@ -49,15 +58,6 @@ public class MediaMutexThread implements Runnable{
         }
         mAudioTrack = mMediaMuxer.addTrack(mediaFormat);
         startMediaMutex();
-    }
-
-    private void startMediaMutex() {
-        if (!isMediaMuxerStart && isVideoTrackExist() && isAudioTrackExist()){
-            Log.e(TAG, "run: MediaMuxerStart");
-            mMediaMuxer.start();
-            isMediaMuxerStart = true;
-            new Thread(this).start();
-        }
     }
 
     public void addVedioTrack(MediaFormat mediaFormat) {
@@ -77,30 +77,31 @@ public class MediaMutexThread implements Runnable{
         return mAudioTrack >= 0;
     }
 
-    public void start() {
+    public void begin() {
         initMediaMuxer();
         isRecording = true;
         isMediaMuxerStart = false;
-        mVideoThread.start();
-        mAudioThread.start();
+        mVideoThread.begin();
+        mAudioThread.begin();
     }
 
     public void frame(byte[] data) {
-        mVideoThread.frame(data);
+        if (isRecording) {
+            //Log.e(TAG, "video frame: " + data.length );
+            mVideoThread.frame(data);
+        }
     }
 
-    public void stop() {
-        isRecording = false;
-        mVideoThread.stop();
-       // mAudioThread.stop();
-    }
-
-    public boolean isMediaMuxerStart() {
-        return isMediaMuxerStart;
-    }
-
-    public void isVedioReallyStop() {
-        mAudioThread.stop();
+    public void end() {
+        try {
+            isRecording = false;
+            mVideoThread.end();
+            mVideoThread.join();
+            mAudioThread.end();
+            mVideoThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void addMutexData(MutexBean data) {
@@ -112,11 +113,10 @@ public class MediaMutexThread implements Runnable{
         while(true) {
             if (!mMutexBeanQueue.isEmpty()) {
                 MutexBean data = mMutexBeanQueue.poll();
-                if (data.isMedia()) {
-                    Log.e(TAG, "Muxer video size: " + data.getBufferInfo().size + " buffer limit: " + data.getByteBuffer().limit());
+                if (data.isVedio()) {
+//                    Log.e(TAG, "Muxer video size: " + data.getBufferInfo().size);
                     mMediaMuxer.writeSampleData(mVideoTrack, data.getByteBuffer(), data.getBufferInfo());
                 } else {
-                    Log.e(TAG, "Muxer audio size: " + data.getBufferInfo().size + " buffer limit: " + data.getByteBuffer().limit());
                     mMediaMuxer.writeSampleData(mAudioTrack, data.getByteBuffer(), data.getBufferInfo());
                 }
             }else {

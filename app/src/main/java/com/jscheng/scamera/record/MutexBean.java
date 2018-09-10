@@ -10,16 +10,16 @@ import java.nio.ByteBuffer;
 public class MutexBean {
     private ByteBuffer byteBuffer;
     private MediaCodec.BufferInfo bufferInfo;
-    private boolean isMedia;
+    private boolean isVedio;
 
-    public MutexBean(boolean isMedia, byte[] bytes, MediaCodec.BufferInfo bufferInfo) {
-        this.isMedia = isMedia;
+    public MutexBean(boolean isVedio, byte[] bytes, MediaCodec.BufferInfo bufferInfo) {
+        this.isVedio = isVedio;
         this.byteBuffer = ByteBuffer.wrap(bytes);
         this.bufferInfo = bufferInfo;
     }
 
-    public boolean isMedia() {
-        return isMedia;
+    public boolean isVedio() {
+        return isVedio;
     }
 
     public ByteBuffer getByteBuffer() {

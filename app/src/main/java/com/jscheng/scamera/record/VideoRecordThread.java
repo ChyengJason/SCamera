@@ -4,21 +4,20 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.util.Log;
-
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingDeque;
 
 import static com.jscheng.scamera.util.LogUtil.TAG;
 
 /**
  * Created By Chengjunsen on 2018/9/8
  */
-public class VideoRecordThread implements Runnable{
+public class VideoRecordThread extends Thread implements Runnable {
     private static final int TIMEOUT_S = 100000;
-    private int mFrameRate = 25;
+    private int mFrameRate = 30;
     private int  mBitRate;
     private int mIFrameInterval = 10;
     private long generateIndex = 0;
@@ -32,7 +31,7 @@ public class VideoRecordThread implements Runnable{
         this.mMutex = new WeakReference<MediaMutexThread>(mMutex);
         this.width = width;
         this.height = height;
-        this.dataQueue =new LinkedBlockingDeque<>();
+        this.dataQueue =new LinkedList<>();
         this.isRecording = false;
         this.mBitRate = height * width * 3 * 8 * mFrameRate / 256;
         initMediaCodec(width, height);
@@ -58,25 +57,25 @@ public class VideoRecordThread implements Runnable{
         }
     }
 
-    public void start() {
+    public void begin() {
         isRecording = true;
         dataQueue.clear();
         generateIndex = 0;
         mMediaCodec.start();
-        new Thread(this).start();
+        start();
     }
 
-    public void stop() {
+    public void end() {
         isRecording = false;
     }
 
     @Override
     public void run() {
-        while (!isRecording && dataQueue.isEmpty()) {
+        while (isRecording) {
             byte[] data = dataQueue.poll();
             if (data != null) {
                 byte[] yuv420sp = new byte[width * height * 3 / 2];
-                NV21ToNV12(data, yuv420sp, width, height);
+                NV21toI420SemiPlanar(data, yuv420sp, width, height);
                 encode(yuv420sp);
             }
         }
@@ -87,10 +86,6 @@ public class VideoRecordThread implements Runnable{
         } catch (Exception e) {
             e.printStackTrace();
         }
-        MediaMutexThread mediaMuxer = this.mMutex.get();
-        if (mediaMuxer != null ) {
-            mediaMuxer.isVedioReallyStop();
-        }
     }
 
     private void encode(byte[] input) {
@@ -98,7 +93,7 @@ public class VideoRecordThread implements Runnable{
             try {
                 int inputBufferIndex = mMediaCodec.dequeueInputBuffer(TIMEOUT_S);
                 if (inputBufferIndex >= 0) {
-                    long pts = System.nanoTime() / 1000L;
+                    long pts = getPts();
                     ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
                     inputBuffer.clear();
                     inputBuffer.put(input);
@@ -125,11 +120,13 @@ public class VideoRecordThread implements Runnable{
 
                     if (bufferInfo.size > 0) {
                         MediaMutexThread mediaMuxer = this.mMutex.get();
-                        if (mediaMuxer != null && mediaMuxer.isMediaMuxerStart()) {
+                        if (mediaMuxer != null) {
                             byte[] outData = new byte[bufferInfo.size];
                             outputBuffer.get(outData);
                             outputBuffer.position(bufferInfo.offset);
                             outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
+                            Log.e(TAG, "video presentationTimeUs : " + bufferInfo.presentationTimeUs);
+                            //bufferInfo.presentationTimeUs = getPts();
                             mediaMuxer.addMutexData(new MutexBean(true, outData, bufferInfo));
                         }
                     }
@@ -145,26 +142,16 @@ public class VideoRecordThread implements Runnable{
         }
     }
 
-    private long computePresentationTime(long frameIndex) {
-        return 132 + frameIndex * 1000000 / mFrameRate;
+    private long getPts() {
+        return System.nanoTime() / 1000L;
     }
 
 
-    private void NV21ToNV12(byte[] nv21, byte[] nv12, int width, int height) {
-        if (nv21 == null || nv12 == null) {
-            return;
-        }
-        int framesize = width * height;
-        int i = 0, j = 0;
-        System.arraycopy(nv21, 0, nv12, 0, framesize);
-        for (i = 0; i < framesize; i++) {
-            nv12[i] = nv21[i];
-        }
-        for (j = 0; j < framesize / 2; j += 2) {
-            nv12[framesize + j - 1] = nv21[j + framesize];
-        }
-        for (j = 0; j < framesize / 2; j += 2) {
-            nv12[framesize + j] = nv21[j + framesize - 1];
+    private static void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
+        System.arraycopy(nv21bytes, 0, i420bytes, 0, width * height);
+        for (int i = width * height; i < nv21bytes.length; i += 2) {
+            i420bytes[i] = nv21bytes[i + 1];
+            i420bytes[i + 1] = nv21bytes[i];
         }
     }
 }
