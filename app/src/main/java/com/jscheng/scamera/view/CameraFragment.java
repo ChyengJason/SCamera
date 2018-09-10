@@ -17,8 +17,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import com.jscheng.scamera.R;
-import com.jscheng.scamera.record.CameraRecorder;
-import com.jscheng.scamera.record.MutexThread;
+import com.jscheng.scamera.record.MediaMutexThread;
 import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.ImageUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
@@ -45,7 +44,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private Size mPreviewSize = null;
     private boolean isTakePhoto;
     private boolean isRecording;
-    private MutexThread mMediaMutex;
+    private MediaMutexThread mMediaMutex;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -261,7 +260,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         if (mPreviewSize != null) {
             String dirPath = StorageUtil.getVedioPath();
             StorageUtil.checkDirExist(dirPath);
-            mMediaMutex = new MutexThread(dirPath + "test.mp4");
+            mMediaMutex = new MediaMutexThread(dirPath + "test.mp4");
             isRecording = true;
             mMediaMutex.start();
         }

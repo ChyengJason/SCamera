@@ -5,7 +5,6 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.util.Log;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -27,10 +26,10 @@ public class VideoRecordThread implements Runnable{
     private boolean isRecording;
     private MediaCodec mMediaCodec;
     private int width, height;
-    private WeakReference<MutexThread> mMutex;
+    private WeakReference<MediaMutexThread> mMutex;
 
-    public VideoRecordThread(MutexThread mMutex, int width, int height) {
-        this.mMutex = new WeakReference<MutexThread>(mMutex);
+    public VideoRecordThread(MediaMutexThread mMutex, int width, int height) {
+        this.mMutex = new WeakReference<MediaMutexThread>(mMutex);
         this.width = width;
         this.height = height;
         this.dataQueue =new LinkedBlockingDeque<>();
@@ -54,7 +53,9 @@ public class VideoRecordThread implements Runnable{
     }
 
     public void frame(byte[] data) {
-        dataQueue.offer(data);
+        if (isRecording) {
+            dataQueue.offer(data);
+        }
     }
 
     public void start() {
@@ -71,22 +72,12 @@ public class VideoRecordThread implements Runnable{
 
     @Override
     public void run() {
-        while (true) {
+        while (!isRecording && dataQueue.isEmpty()) {
             byte[] data = dataQueue.poll();
             if (data != null) {
                 byte[] yuv420sp = new byte[width * height * 3 / 2];
-                // 必须要转格式，否则录制的内容播放出来为绿屏
                 NV21ToNV12(data, yuv420sp, width, height);
                 encode(yuv420sp);
-            } else {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (!isRecording && dataQueue.isEmpty()) {
-                    break;
-                }
             }
         }
         // 停止编解码器并释放资源
@@ -96,6 +87,10 @@ public class VideoRecordThread implements Runnable{
         } catch (Exception e) {
             e.printStackTrace();
         }
+        MediaMutexThread mediaMuxer = this.mMutex.get();
+        if (mediaMuxer != null ) {
+            mediaMuxer.isVedioReallyStop();
+        }
     }
 
     private void encode(byte[] input) {
@@ -104,7 +99,6 @@ public class VideoRecordThread implements Runnable{
                 int inputBufferIndex = mMediaCodec.dequeueInputBuffer(TIMEOUT_S);
                 if (inputBufferIndex >= 0) {
                     long pts = System.nanoTime() / 1000L;
-                    Log.e(TAG, "encode: pts: "+ pts);
                     ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
                     inputBuffer.clear();
                     inputBuffer.put(input);
@@ -114,26 +108,30 @@ public class VideoRecordThread implements Runnable{
 
                 MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
                 int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_S);
+                if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    Log.e(TAG, "vedio run: INFO_OUTPUT_FORMAT_CHANGED");
+                    MediaMutexThread mediaMutex = mMutex.get();
+                    if (mediaMutex != null && !mediaMutex.isVideoTrackExist()) {
+                        mediaMutex.addVedioTrack(mMediaCodec.getOutputFormat());
+                    }
+                }
+
                 while (outputBufferIndex >= 0) {
                     ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(outputBufferIndex);
                     if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
-                        Log.e(TAG, "run: BUFFER_FLAG_CODEC_CONFIG" );
+                        Log.e(TAG, "vedio run: BUFFER_FLAG_CODEC_CONFIG" );
                         bufferInfo.size = 0;
                     }
+
                     if (bufferInfo.size > 0) {
-                        MutexThread mediaMuxer = this.mMutex.get();
-                        if (mediaMuxer != null) {
-                            // adjust the ByteBuffer values to match BufferInfo (not needed?)
-                            if (!mediaMuxer.isVideoTrackExist()) {
-                                mediaMuxer.addVedioTrack(mMediaCodec.getOutputFormat());
-                            }
+                        MediaMutexThread mediaMuxer = this.mMutex.get();
+                        if (mediaMuxer != null && mediaMuxer.isMediaMuxerStart()) {
                             byte[] outData = new byte[bufferInfo.size];
                             outputBuffer.get(outData);
                             outputBuffer.position(bufferInfo.offset);
                             outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-                            mediaMuxer.addVideoData(new MutexBean(outData, bufferInfo));
+                            mediaMuxer.addMutexData(new MutexBean(true, outData, bufferInfo));
                         }
-                        //Log.e(TAG, "sent " + bufferInfo.size + " frameBytes to muxer");
                     }
                     mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
                     bufferInfo = new MediaCodec.BufferInfo();

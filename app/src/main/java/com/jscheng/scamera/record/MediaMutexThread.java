@@ -3,21 +3,16 @@ package com.jscheng.scamera.record;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.util.Log;
-
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingDeque;
-
+import java.util.concurrent.ArrayBlockingQueue;
 import static com.jscheng.scamera.util.LogUtil.TAG;
-
 
 /**
  * Created By Chengjunsen on 2018/9/8
  */
-public class MutexThread implements Runnable{
-    private Queue<MutexBean> mVideoQueue;
-    private Queue<MutexBean> mAudioQueue;
+public class MediaMutexThread implements Runnable{
+    private Queue<MutexBean> mMutexBeanQueue;
     private boolean isRecording;
     private AudioRecordThread mAudioThread;
     private VideoRecordThread mVideoThread;
@@ -27,12 +22,11 @@ public class MutexThread implements Runnable{
     private int mVideoTrack;
     private boolean isMediaMuxerStart;
 
-    public MutexThread(String path) {
+    public MediaMutexThread(String path) {
         this.isRecording = false;
         this.isMediaMuxerStart = false;
         this.path = path;
-        this.mVideoQueue = new LinkedBlockingDeque<>();
-        this.mAudioQueue = new LinkedBlockingDeque<>();
+        this.mMutexBeanQueue = new ArrayBlockingQueue<>(20);
         this.mAudioThread = new AudioRecordThread(this);
         this.mVideoThread = new VideoRecordThread(this, 1280, 720);
     }
@@ -98,35 +92,40 @@ public class MutexThread implements Runnable{
     public void stop() {
         isRecording = false;
         mVideoThread.stop();
+       // mAudioThread.stop();
+    }
+
+    public boolean isMediaMuxerStart() {
+        return isMediaMuxerStart;
+    }
+
+    public void isVedioReallyStop() {
         mAudioThread.stop();
     }
-    public void addVideoData(MutexBean data) {
-        mVideoQueue.offer(data);
+
+    public void addMutexData(MutexBean data) {
+        mMutexBeanQueue.offer(data);
     }
 
-    public void addAudioData(MutexBean data) {
-        mAudioQueue.offer(data);
-    }
-
-
-    int frameIndex = 0;
     @Override
     public void run() {
         while(true) {
-            if (!mVideoQueue.isEmpty()) {
-                MutexBean data = mVideoQueue.poll();
-                mMediaMuxer.writeSampleData(mVideoTrack, data.getByteBuffer(), data.getBufferInfo());
-                Log.e(TAG, "mutex video : " + frameIndex++);
-            } else if(!mAudioQueue.isEmpty()) {
-                MutexBean data = mAudioQueue.poll();
-                mMediaMuxer.writeSampleData(mAudioTrack, data.getByteBuffer(), data.getBufferInfo());
-            } else {
+            if (!mMutexBeanQueue.isEmpty()) {
+                MutexBean data = mMutexBeanQueue.poll();
+                if (data.isMedia()) {
+                    Log.e(TAG, "Muxer video size: " + data.getBufferInfo().size + " buffer limit: " + data.getByteBuffer().limit());
+                    mMediaMuxer.writeSampleData(mVideoTrack, data.getByteBuffer(), data.getBufferInfo());
+                } else {
+                    Log.e(TAG, "Muxer audio size: " + data.getBufferInfo().size + " buffer limit: " + data.getByteBuffer().limit());
+                    mMediaMuxer.writeSampleData(mAudioTrack, data.getByteBuffer(), data.getBufferInfo());
+                }
+            }else {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(300);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                if (!isRecording && mVideoQueue.isEmpty() && mAudioQueue.isEmpty()) {
+                if (!isRecording && mMutexBeanQueue.isEmpty()) {
                     break;
                 }
             }
