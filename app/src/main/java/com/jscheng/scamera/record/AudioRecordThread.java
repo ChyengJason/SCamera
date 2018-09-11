@@ -17,8 +17,7 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
  * Created By Chengjunsen on 2018/9/8
  */
 public class AudioRecordThread extends Thread implements Runnable {
-    private static final int TIMEOUT_S = 100000;
-
+    private static final int TIMEOUT_S = 10000;// 1s
     private WeakReference<MediaMutexThread> mMutex;
     private int mSampleRate = 16000;
     private int mBitRate = 64000;
@@ -27,8 +26,6 @@ public class AudioRecordThread extends Thread implements Runnable {
     private AudioRecord mAudioRecorder;
     private int minBufferSize;
     private long prevOutputPTSUs;
-    public static final int SAMPLES_PER_FRAME = 1024;
-    public static final int FRAMES_PER_BUFFER = 25;
 
     public AudioRecordThread(MediaMutexThread mediaMutexThread) {
         this.mMutex = new WeakReference<>(mediaMutexThread);
@@ -52,7 +49,7 @@ public class AudioRecordThread extends Thread implements Runnable {
 
     private boolean initRecorder() {
         minBufferSize = AudioRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-        mAudioRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, mSampleRate,  AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, minBufferSize);
+        mAudioRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, mSampleRate,  AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, 2 * minBufferSize);
         if (mAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "initRecord: mAudioRecord init failed");
             isRecording = false;
@@ -64,31 +61,24 @@ public class AudioRecordThread extends Thread implements Runnable {
 
     @Override
     public void run() {
-        initCodec();
-        initRecorder();
-
-        final ByteBuffer bytesBuffer = ByteBuffer.allocateDirect(minBufferSize);
+        byte[] bufferBytes = new byte[minBufferSize];
         int len = 0;
         while(isRecording) {
-            bytesBuffer.clear();
-            len = mAudioRecorder.read(bytesBuffer, minBufferSize);
+            len = mAudioRecorder.read(bufferBytes, 0, minBufferSize);
             if (len > 0) {
-                bytesBuffer.position(len);
-                bytesBuffer.flip();
-                record(bytesBuffer, len, getPTSUs());
+                record(bufferBytes, len, getPTSUs());
             }
         }
-
         release();
     }
 
-    private void record(final ByteBuffer bytesBuffer, final int len, final long presentationTimeUs) {
+    private void record(byte[] bufferBytes, final int len, final long presentationTimeUs) {
         int inputBufferIndex = mMediaCodec.dequeueInputBuffer(TIMEOUT_S);
         if (inputBufferIndex >= 0) {
             ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
             inputBuffer.clear();
             if (inputBuffer != null) {
-                inputBuffer.put(bytesBuffer);
+                inputBuffer.put(bufferBytes);
             }
             if (len <= 0) {
                 mMediaCodec.queueInputBuffer(inputBufferIndex, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
@@ -115,15 +105,15 @@ public class AudioRecordThread extends Thread implements Runnable {
                 bufferInfo.size = 0;
             }
             if (bufferInfo.size > 0) {
-                MediaMutexThread mediaMutex = mMutex.get();
-                if (mediaMutex != null) {
+                MediaMutexThread mediaMuxer = mMutex.get();
+                if (mediaMuxer != null) {
                     byte[] outData = new byte[bufferInfo.size];
                     outputBuffer.get(outData);
                     outputBuffer.position(bufferInfo.offset);
                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-                    //bufferInfo.presentationTimeUs = getPTSUs();
+                    bufferInfo.presentationTimeUs = getPTSUs();
                     Log.e(TAG, "audio presentationTimeUs : " + bufferInfo.presentationTimeUs);
-                    mediaMutex.addMutexData(new MutexBean(false, outData, bufferInfo));
+                    mediaMuxer.addMutexData(new MutexBean(false, outData, bufferInfo));
                     prevOutputPTSUs = bufferInfo.presentationTimeUs;
                 }
             }
@@ -142,6 +132,11 @@ public class AudioRecordThread extends Thread implements Runnable {
 
     public void end() {
         isRecording = false;
+    }
+
+    public void prepare() {
+        initCodec();
+        initRecorder();
     }
 
     private long getPTSUs() {

@@ -29,13 +29,15 @@ public class MediaMutexThread extends Thread implements Runnable{
         this.mMutexBeanQueue = new ArrayBlockingQueue(100);
     }
 
-    public void initMediaMuxer(int width, int height) {
+    public void prepareMediaMuxer(int width, int height) {
         try {
             mAudioTrack = -1;
             mVideoTrack = -1;
             mMediaMuxer = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-            this.mAudioThread = new AudioRecordThread(this);
-            this.mVideoThread = new VideoRecordThread(this, width, height);
+            mAudioThread = new AudioRecordThread(this);
+            mVideoThread = new VideoRecordThread(this, width, height);
+            mAudioThread.prepare();
+            mVideoThread.prapare();
         } catch (IOException e) {
             Log.e(TAG, "initMediaMuxer: " + e.toString());
             e.printStackTrace();
@@ -78,7 +80,7 @@ public class MediaMutexThread extends Thread implements Runnable{
     }
 
     public void begin(int width, int height) {
-        initMediaMuxer(width, height);
+        prepareMediaMuxer(width, height);
         isRecording = true;
         isMediaMuxerStart = false;
         mVideoThread.begin();
@@ -87,7 +89,6 @@ public class MediaMutexThread extends Thread implements Runnable{
 
     public void frame(byte[] data) {
         if (isRecording) {
-            //Log.e(TAG, "video frame: " + data.length );
             mVideoThread.frame(data);
         }
     }
@@ -114,7 +115,6 @@ public class MediaMutexThread extends Thread implements Runnable{
             if (!mMutexBeanQueue.isEmpty()) {
                 MutexBean data = mMutexBeanQueue.poll();
                 if (data.isVedio()) {
-//                    Log.e(TAG, "Muxer video size: " + data.getBufferInfo().size);
                     mMediaMuxer.writeSampleData(mVideoTrack, data.getByteBuffer(), data.getBufferInfo());
                 } else {
                     mMediaMuxer.writeSampleData(mAudioTrack, data.getByteBuffer(), data.getBufferInfo());
@@ -130,10 +130,18 @@ public class MediaMutexThread extends Thread implements Runnable{
                 }
             }
         }
+        release();
+    }
+
+    private void release() {
         if (mMediaMuxer != null && isMediaMuxerStart) {
             mMediaMuxer.stop();
             mMediaMuxer.release();
             mMediaMuxer = null;
         }
+    }
+
+    public boolean isMediaMuxerStart() {
+        return isMediaMuxerStart;
     }
 }

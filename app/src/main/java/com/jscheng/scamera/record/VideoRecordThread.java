@@ -16,7 +16,7 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
  * Created By Chengjunsen on 2018/9/8
  */
 public class VideoRecordThread extends Thread implements Runnable {
-    private static final int TIMEOUT_S = 100000;
+    private static final int TIMEOUT_S = 10000;
     private int mFrameRate = 30;
     private int  mBitRate;
     private int mIFrameInterval = 10;
@@ -26,6 +26,7 @@ public class VideoRecordThread extends Thread implements Runnable {
     private MediaCodec mMediaCodec;
     private int width, height;
     private WeakReference<MediaMutexThread> mMutex;
+    byte[] yuv420sp;
 
     public VideoRecordThread(MediaMutexThread mMutex, int width, int height) {
         this.mMutex = new WeakReference<MediaMutexThread>(mMutex);
@@ -34,6 +35,7 @@ public class VideoRecordThread extends Thread implements Runnable {
         this.dataQueue =new LinkedList<>();
         this.isRecording = false;
         this.mBitRate = height * width * 3 * 8 * mFrameRate / 256;
+        this.yuv420sp = new byte[width * height * 3 / 2];
     }
 
     private boolean initMediaCodec(int width, int height) {
@@ -59,9 +61,13 @@ public class VideoRecordThread extends Thread implements Runnable {
         }
     }
 
+    public void prapare() {
+        initMediaCodec(width, height);
+    }
+
     public void begin() {
-        isRecording = true;
         dataQueue.clear();
+        isRecording = true;
         generateIndex = 0;
         start();
     }
@@ -72,12 +78,9 @@ public class VideoRecordThread extends Thread implements Runnable {
 
     @Override
     public void run() {
-        initMediaCodec(width, height);
-
         while (isRecording) {
             byte[] data = dataQueue.poll();
             if (data != null) {
-                byte[] yuv420sp = new byte[width * height * 3 / 2];
                 NV21toI420SemiPlanar(data, yuv420sp, width, height);
                 encode(yuv420sp);
             }
@@ -133,7 +136,7 @@ public class VideoRecordThread extends Thread implements Runnable {
                             outputBuffer.position(bufferInfo.offset);
                             outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
                             Log.e(TAG, "video presentationTimeUs : " + bufferInfo.presentationTimeUs);
-                            //bufferInfo.presentationTimeUs = getPts();
+                            bufferInfo.presentationTimeUs = getPts();
                             mediaMuxer.addMutexData(new MutexBean(true, outData, bufferInfo));
                         }
                     }
@@ -148,8 +151,6 @@ public class VideoRecordThread extends Thread implements Runnable {
             }
         }
     }
-
-
 
     private long getPts() {
         return System.nanoTime() / 1000L;
