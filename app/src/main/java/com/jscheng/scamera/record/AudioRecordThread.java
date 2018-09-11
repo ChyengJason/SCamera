@@ -34,31 +34,39 @@ public class AudioRecordThread extends Thread implements Runnable {
         this.mMutex = new WeakReference<>(mediaMutexThread);
     }
 
-    private void initMediaCodec() {
+    private boolean initCodec() {
         try {
             MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, mSampleRate, 1);
             format.setInteger(MediaFormat.KEY_BIT_RATE, mBitRate);
             format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
             format.setInteger(MediaFormat.KEY_SAMPLE_RATE, mSampleRate);
-
-            minBufferSize = AudioRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            Log.e(TAG, "initMediaCodec: minbuffersize" + minBufferSize );
-            int buffer_size = SAMPLES_PER_FRAME * FRAMES_PER_BUFFER;
-            if (buffer_size < minBufferSize) {
-                buffer_size = ((minBufferSize / SAMPLES_PER_FRAME) + 1) * SAMPLES_PER_FRAME * 2;
-            }
-
-            mAudioRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, mSampleRate,  AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buffer_size);
             mMediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
             mMediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mMediaCodec.start();
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
+        return true;
+    }
+
+    private boolean initRecorder() {
+        minBufferSize = AudioRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        mAudioRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, mSampleRate,  AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, minBufferSize);
+        if (mAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "initRecord: mAudioRecord init failed");
+            isRecording = false;
+            return false;
+        }
+        mAudioRecorder.startRecording();
+        return true;
     }
 
     @Override
     public void run() {
+        initCodec();
+        initRecorder();
+
         final ByteBuffer bytesBuffer = ByteBuffer.allocateDirect(minBufferSize);
         int len = 0;
         while(isRecording) {
@@ -70,16 +78,8 @@ public class AudioRecordThread extends Thread implements Runnable {
                 record(bytesBuffer, len, getPTSUs());
             }
         }
-        if (mAudioRecorder != null && mAudioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
-            mAudioRecorder.stop();
-            mAudioRecorder.release();
-            mAudioRecorder = null;
-        }
-        if (mMediaCodec != null) {
-            mMediaCodec.stop();
-            mMediaCodec.release();
-            mMediaCodec = null;
-        }
+
+        release();
     }
 
     private void record(final ByteBuffer bytesBuffer, final int len, final long presentationTimeUs) {
@@ -121,7 +121,7 @@ public class AudioRecordThread extends Thread implements Runnable {
                     outputBuffer.get(outData);
                     outputBuffer.position(bufferInfo.offset);
                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-                    bufferInfo.presentationTimeUs = getPTSUs();
+                    //bufferInfo.presentationTimeUs = getPTSUs();
                     Log.e(TAG, "audio presentationTimeUs : " + bufferInfo.presentationTimeUs);
                     mediaMutex.addMutexData(new MutexBean(false, outData, bufferInfo));
                     prevOutputPTSUs = bufferInfo.presentationTimeUs;
@@ -134,16 +134,9 @@ public class AudioRecordThread extends Thread implements Runnable {
     }
 
     public void begin() {
-        initMediaCodec();
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
-        if (mAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
-            Log.e(TAG, "initRecord: mAudioRecord init failed");
-            isRecording = false;
-            return;
-        }
         prevOutputPTSUs = 0;
         isRecording = true;
-        mAudioRecorder.startRecording();
         start();
     }
 
@@ -154,5 +147,18 @@ public class AudioRecordThread extends Thread implements Runnable {
     private long getPTSUs() {
         long result = System.nanoTime() / 1000L;
         return result < prevOutputPTSUs ? prevOutputPTSUs : result;
+    }
+
+    private void release() {
+        if (mAudioRecorder != null ) {
+            mAudioRecorder.stop();
+            mAudioRecorder.release();
+            mAudioRecorder = null;
+        }
+        if (mMediaCodec != null) {
+            mMediaCodec.stop();
+            mMediaCodec.release();
+            mMediaCodec = null;
+        }
     }
 }

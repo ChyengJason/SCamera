@@ -34,10 +34,9 @@ public class VideoRecordThread extends Thread implements Runnable {
         this.dataQueue =new LinkedList<>();
         this.isRecording = false;
         this.mBitRate = height * width * 3 * 8 * mFrameRate / 256;
-        initMediaCodec(width, height);
     }
 
-    private void initMediaCodec(int width, int height) {
+    private boolean initMediaCodec(int width, int height) {
         try {
             MediaFormat mediaFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
             mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
@@ -46,9 +45,12 @@ public class VideoRecordThread extends Thread implements Runnable {
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval);
             mMediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
             mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            mMediaCodec.start();
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
+        return true;
     }
 
     public void frame(byte[] data) {
@@ -61,7 +63,6 @@ public class VideoRecordThread extends Thread implements Runnable {
         isRecording = true;
         dataQueue.clear();
         generateIndex = 0;
-        mMediaCodec.start();
         start();
     }
 
@@ -71,6 +72,8 @@ public class VideoRecordThread extends Thread implements Runnable {
 
     @Override
     public void run() {
+        initMediaCodec(width, height);
+
         while (isRecording) {
             byte[] data = dataQueue.poll();
             if (data != null) {
@@ -79,6 +82,10 @@ public class VideoRecordThread extends Thread implements Runnable {
                 encode(yuv420sp);
             }
         }
+        release();
+    }
+
+    private void release() {
         // 停止编解码器并释放资源
         try {
             mMediaCodec.stop();
@@ -142,10 +149,11 @@ public class VideoRecordThread extends Thread implements Runnable {
         }
     }
 
+
+
     private long getPts() {
         return System.nanoTime() / 1000L;
     }
-
 
     private static void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
         System.arraycopy(nv21bytes, 0, i420bytes, 0, width * height);
