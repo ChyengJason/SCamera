@@ -27,15 +27,15 @@ public class MediaMutexThread extends Thread implements Runnable{
         this.isMediaMuxerStart = false;
         this.path = path;
         this.mMutexBeanQueue = new ArrayBlockingQueue(100);
-        this.mAudioThread = new AudioRecordThread(this);
-        this.mVideoThread = new VideoRecordThread(this, 1280, 720);
     }
 
-    public void initMediaMuxer() {
+    public void initMediaMuxer(int width, int height) {
         try {
             mAudioTrack = -1;
             mVideoTrack = -1;
             mMediaMuxer = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            this.mAudioThread = new AudioRecordThread(this);
+            this.mVideoThread = new VideoRecordThread(this, width, height);
         } catch (IOException e) {
             Log.e(TAG, "initMediaMuxer: " + e.toString());
             e.printStackTrace();
@@ -77,8 +77,8 @@ public class MediaMutexThread extends Thread implements Runnable{
         return mAudioTrack >= 0;
     }
 
-    public void begin() {
-        initMediaMuxer();
+    public void begin(int width, int height) {
+        initMediaMuxer(width, height);
         isRecording = true;
         isMediaMuxerStart = false;
         mVideoThread.begin();

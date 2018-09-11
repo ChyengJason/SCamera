@@ -244,7 +244,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         if (isTakePhoto){
             String dirPath = StorageUtil.getImagePath();
             StorageUtil.checkDirExist(dirPath);
-            boolean result = ImageUtil.saveNV21(bytes, 1280, 720, dirPath + "image.jpg");
+            boolean result = ImageUtil.saveNV21(bytes, mPreviewSize.getWidth(), mPreviewSize.getHeight(), dirPath + "image.jpg");
             isTakePhoto = false;
             if (result) {
                 Intent intent = new Intent(getContext(), ImageActivity.class);
@@ -262,7 +262,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             StorageUtil.checkDirExist(dirPath);
             mMediaMutex = new MediaMutexThread(dirPath + "test.mp4");
             isRecording = true;
-            mMediaMutex.begin();
+            mMediaMutex.begin(mPreviewSize.getHeight(), mPreviewSize.getWidth());
         }
     }
 

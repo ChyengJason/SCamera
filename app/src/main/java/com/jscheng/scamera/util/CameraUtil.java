@@ -111,11 +111,11 @@ public class CameraUtil {
         if (mCamera != null) {
             Camera.Parameters parameters = mCamera.getParameters();
             mOrientation = getCameraPreviewOrientation(activity, mCameraID);
-//            Camera.Size bestPreviewSize = getOptimalSize(parameters.getSupportedPreviewSizes(), width, height);
-            parameters.setPreviewSize(1280, 720);
-//            Camera.Size bestPictureSize = getOptimalSize(parameters.getSupportedPictureSizes(), width, height);
-//            parameters.setPictureSize(1280, 720);
-//            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+            Camera.Size bestPreviewSize = getOptimalSize(parameters.getSupportedPreviewSizes(), width, height);
+            parameters.setPreviewSize(bestPreviewSize.width, bestPreviewSize.height);
+            Camera.Size bestPictureSize = getOptimalSize(parameters.getSupportedPictureSizes(), width, height);
+            parameters.setPictureSize(bestPictureSize.width, bestPictureSize.height);
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             parameters.setPreviewFormat(ImageFormat.NV21);
             mCamera.setParameters(parameters);
             mCamera.setDisplayOrientation(mOrientation);

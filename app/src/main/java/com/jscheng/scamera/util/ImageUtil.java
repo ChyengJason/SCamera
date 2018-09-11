@@ -29,7 +29,7 @@ public class ImageUtil {
     public static Bitmap convertNV21(byte[] data, int width, int height) {
         YuvImage yuvImage = new YuvImage(rotateYUV420Degree90(data, width, height), ImageFormat.NV21, width, height, null);
         ByteArrayOutputStream os = new ByteArrayOutputStream(data.length);
-        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 100, os);
+        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 70, os);
         byte[] tmp = os.toByteArray();
         Bitmap bitmap = BitmapFactory.decodeByteArray(tmp, 0,tmp.length);
         return bitmap;
@@ -45,7 +45,7 @@ public class ImageUtil {
                     data = rotateYUV420Degree270(data, height, width);
                 }
                 YuvImage yuvImage = new YuvImage(data, ImageFormat.NV21, width, height, null);
-                yuvImage.compressToJpeg(new Rect(0, 0, width, height), 100, outputStream);
+                yuvImage.compressToJpeg(new Rect(0, 0, width, height), 70, outputStream);
                 outputStream.flush();
                 outputStream.close();
                 return true;
