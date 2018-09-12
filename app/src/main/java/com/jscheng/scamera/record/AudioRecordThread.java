@@ -18,7 +18,7 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
  */
 public class AudioRecordThread extends Thread implements Runnable {
     private static final int TIMEOUT_S = 10000;// 1s
-    private WeakReference<MediaMutexThread> mMutex;
+    private WeakReference<MediaMuxerThread> mMutex;
     private int mSampleRate = 16000;
     private int mBitRate = 64000;
     private boolean isRecording;
@@ -27,7 +27,7 @@ public class AudioRecordThread extends Thread implements Runnable {
     private int minBufferSize;
     private long prevOutputPTSUs;
 
-    public AudioRecordThread(MediaMutexThread mediaMutexThread) {
+    public AudioRecordThread(MediaMuxerThread mediaMutexThread) {
         this.mMutex = new WeakReference<>(mediaMutexThread);
     }
 
@@ -92,7 +92,7 @@ public class AudioRecordThread extends Thread implements Runnable {
         int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_S);
         if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
             Log.e(TAG, "audio run: INFO_OUTPUT_FORMAT_CHANGED");
-            MediaMutexThread mediaMutex = mMutex.get();
+            MediaMuxerThread mediaMutex = mMutex.get();
             if (mediaMutex != null && !mediaMutex.isAudioTrackExist()) {
                 mediaMutex.addAudioTrack(mMediaCodec.getOutputFormat());
             }
@@ -105,7 +105,7 @@ public class AudioRecordThread extends Thread implements Runnable {
                 bufferInfo.size = 0;
             }
             if (bufferInfo.size > 0) {
-                MediaMutexThread mediaMuxer = mMutex.get();
+                MediaMuxerThread mediaMuxer = mMutex.get();
                 if (mediaMuxer != null) {
                     byte[] outData = new byte[bufferInfo.size];
                     outputBuffer.get(outData);

@@ -17,7 +17,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import com.jscheng.scamera.R;
-import com.jscheng.scamera.record.MediaMutexThread;
+import com.jscheng.scamera.record.MediaMuxerThread;
 import com.jscheng.scamera.util.CameraUtil;
 import com.jscheng.scamera.util.ImageUtil;
 import com.jscheng.scamera.util.PermisstionUtil;
@@ -29,7 +29,7 @@ import com.jscheng.scamera.widget.CameraSwitchView;
 /**
  * Created By Chengjunsen on 2018/8/22
  */
-public class CameraFragment extends Fragment implements CameraProgressButton.Listener, TextureView.SurfaceTextureListener, CameraSensor.CameraSensorListener, Camera.PreviewCallback{
+public class CameraFragment extends Fragment implements CameraProgressButton.Listener, MediaMuxerThread.MediaMuxerCallback, TextureView.SurfaceTextureListener, CameraSensor.CameraSensorListener, Camera.PreviewCallback{
     private final static String TAG = CameraFragment.class.getSimpleName();
     private final static int CAMERA_REQUEST_CODE = 1;
     private final static int STORE_REQUEST_CODE = 2;
@@ -44,7 +44,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private Size mPreviewSize = null;
     private boolean isTakePhoto;
     private boolean isRecording;
-    private MediaMutexThread mMediaMutex;
+    private MediaMuxerThread mMediaMuxer;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -252,28 +252,37 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
                 startActivity(intent);
             }
         } else if (isRecording) {
-            mMediaMutex.frame(bytes);
+            mMediaMuxer.frame(bytes);
         }
     }
 
     private void beginRecord() {
         if (mPreviewSize != null) {
+            isRecording = true;
             String dirPath = StorageUtil.getVedioPath();
             StorageUtil.checkDirExist(dirPath);
-            mMediaMutex = new MediaMutexThread(dirPath + "test.mp4");
-            isRecording = true;
-            mMediaMutex.begin(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+            mMediaMuxer = new MediaMuxerThread(dirPath + "video.mp4");
+            mMediaMuxer.setMediaMuxerCallback(this);
+            mMediaMuxer.begin(mPreviewSize.getHeight(), mPreviewSize.getWidth());
         }
     }
 
     private void endRecord() {
         if (isRecording) {
             isRecording = false;
-            mMediaMutex.end();
-//            String path = StorageUtil.getVedioPath() + "test.mp4";
-//            Intent intent = new Intent(getContext(), VideoActivity.class);
-//            intent.putExtra("path", path);
-//            startActivity(intent);
+            mMediaMuxer.end();
         }
+    }
+
+    @Override
+    public void onFinishMediaMutex(final String path) {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Intent intent = new Intent(getContext(), VideoActivity.class);
+                intent.putExtra("path", path);
+                startActivity(intent);
+            }
+        });
     }
 }

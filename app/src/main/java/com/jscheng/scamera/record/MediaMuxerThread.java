@@ -11,7 +11,7 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
 /**
  * Created By Chengjunsen on 2018/9/8
  */
-public class MediaMutexThread extends Thread implements Runnable{
+public class MediaMuxerThread extends Thread implements Runnable{
     private Queue<MutexBean> mMutexBeanQueue;
     private boolean isRecording;
     private AudioRecordThread mAudioThread;
@@ -21,12 +21,14 @@ public class MediaMutexThread extends Thread implements Runnable{
     private int mAudioTrack;
     private int mVideoTrack;
     private boolean isMediaMuxerStart;
+    private MediaMuxerCallback mMediaMuxerCallback;
 
-    public MediaMutexThread(String path) {
+    public MediaMuxerThread(String path) {
         this.isRecording = false;
         this.isMediaMuxerStart = false;
         this.path = path;
         this.mMutexBeanQueue = new ArrayBlockingQueue(100);
+        this.mMediaMuxerCallback = null;
     }
 
     public void prepareMediaMuxer(int width, int height) {
@@ -98,8 +100,10 @@ public class MediaMutexThread extends Thread implements Runnable{
             isRecording = false;
             mVideoThread.end();
             mVideoThread.join();
+            mVideoThread = null;
             mAudioThread.end();
-            mVideoThread.join();
+            mAudioThread.join();
+            mAudioThread = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -131,6 +135,9 @@ public class MediaMutexThread extends Thread implements Runnable{
             }
         }
         release();
+        if (mMediaMuxerCallback != null) {
+            mMediaMuxerCallback.onFinishMediaMutex(path);
+        }
     }
 
     private void release() {
@@ -143,5 +150,13 @@ public class MediaMutexThread extends Thread implements Runnable{
 
     public boolean isMediaMuxerStart() {
         return isMediaMuxerStart;
+    }
+
+    public void setMediaMuxerCallback(MediaMuxerCallback callback) {
+        this.mMediaMuxerCallback = callback;
+    }
+
+    public interface MediaMuxerCallback {
+        void onFinishMediaMutex(String path);
     }
 }

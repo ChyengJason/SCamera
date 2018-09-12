@@ -4,6 +4,9 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.util.Log;
+
+import com.jscheng.scamera.util.ImageUtil;
+
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -25,11 +28,11 @@ public class VideoRecordThread extends Thread implements Runnable {
     private boolean isRecording;
     private MediaCodec mMediaCodec;
     private int width, height;
-    private WeakReference<MediaMutexThread> mMutex;
+    private WeakReference<MediaMuxerThread> mMutex;
     byte[] yuv420sp;
 
-    public VideoRecordThread(MediaMutexThread mMutex, int width, int height) {
-        this.mMutex = new WeakReference<MediaMutexThread>(mMutex);
+    public VideoRecordThread(MediaMuxerThread mMutex, int width, int height) {
+        this.mMutex = new WeakReference<MediaMuxerThread>(mMutex);
         this.width = width;
         this.height = height;
         this.dataQueue =new LinkedList<>();
@@ -115,7 +118,7 @@ public class VideoRecordThread extends Thread implements Runnable {
                 int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_S);
                 if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     Log.e(TAG, "vedio run: INFO_OUTPUT_FORMAT_CHANGED");
-                    MediaMutexThread mediaMutex = mMutex.get();
+                    MediaMuxerThread mediaMutex = mMutex.get();
                     if (mediaMutex != null && !mediaMutex.isVideoTrackExist()) {
                         mediaMutex.addVedioTrack(mMediaCodec.getOutputFormat());
                     }
@@ -129,7 +132,7 @@ public class VideoRecordThread extends Thread implements Runnable {
                     }
 
                     if (bufferInfo.size > 0) {
-                        MediaMutexThread mediaMuxer = this.mMutex.get();
+                        MediaMuxerThread mediaMuxer = this.mMutex.get();
                         if (mediaMuxer != null) {
                             byte[] outData = new byte[bufferInfo.size];
                             outputBuffer.get(outData);
