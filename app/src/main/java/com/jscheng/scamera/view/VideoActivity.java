@@ -11,12 +11,14 @@ import java.nio.ByteBuffer;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 
 import com.jscheng.scamera.BaseActivity;
 import com.jscheng.scamera.R;
+import com.jscheng.scamera.util.StorageUtil;
+import com.jscheng.scamera.widget.PlayerView;
+
 import java.io.IOException;
 import static android.content.ContentValues.TAG;
 
@@ -26,8 +28,9 @@ import static android.content.ContentValues.TAG;
 public class VideoActivity extends BaseActivity implements TextureView.SurfaceTextureListener{
     private static final int TIMEOUT_S = 12000;
 
-    private TextureView mTextureView;
+    private PlayerView mTextureView;
     private String path;
+    private int mVideoWidth, getmVideoHeight;
     private MediaCodec mMediaCodec;
     private MediaExtractor mExtractor;
     private MediaCodec.BufferInfo mBufferInfo;
@@ -40,12 +43,16 @@ public class VideoActivity extends BaseActivity implements TextureView.SurfaceTe
         getWindow().setFlags(WindowManager.LayoutParams. FLAG_FULLSCREEN, WindowManager.LayoutParams. FLAG_FULLSCREEN);
         setContentView(R.layout.activity_video);
         path = getIntent().getStringExtra("path");
+        if (path == null || path.isEmpty()) {
+            path = StorageUtil.getVedioPath() + "video.mp4";
+        }
         mTextureView = findViewById(R.id.video_view);
+        mTextureView.setVideoSize(1280, 1920);
+        mTextureView.setRotation(90);
         mTextureView.setSurfaceTextureListener(this);
     }
 
     private boolean initVideoView() {
-        mTextureView.setRotation(90);
         return true;
     }
 
