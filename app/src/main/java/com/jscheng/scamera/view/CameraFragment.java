@@ -127,7 +127,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     }
 
     public void startPreview() {
-        if (requestCameraPermission()) {
+        if (requestPermission()) {
             if (CameraUtil.getCamera() == null) {
                 CameraUtil.openCamera();
             }
@@ -161,14 +161,14 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onShortPress() {
-        if (requestStoragePermission() && requestAudioPermission()) {
+        if (requestPermission()) {
             takePicture();
         }
     }
 
     @Override
     public void onStartLongPress() {
-        if (requestStoragePermission() && requestAudioPermission()) {
+        if (requestPermission()) {
             beginRecord();
         }
     }
@@ -181,6 +181,10 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     @Override
     public void onEndMaxProgress() {
         endRecord();
+    }
+
+    private boolean requestPermission() {
+        return requestCameraPermission() && requestAudioPermission() && requestStoragePermission();
     }
 
     private boolean requestCameraPermission() {
@@ -230,7 +234,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == CAMERA_REQUEST_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (requestPermission()) {
             startPreview();
         }
     }
@@ -281,6 +285,8 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
             public void run() {
                 Intent intent = new Intent(getContext(), VideoActivity.class);
                 intent.putExtra("path", path);
+                intent.putExtra("width", mPreviewSize.getHeight());
+                intent.putExtra("height", mPreviewSize.getWidth());
                 startActivity(intent);
             }
         });
