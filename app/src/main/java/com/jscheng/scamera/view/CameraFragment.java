@@ -54,11 +54,9 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private CameraProgressButton mProgressBtn;
     private CameraFocusView mFocusView;
     private CameraSwitchView mSwitchView;
-    private ImageView mImageView;
     private boolean isFocusing;
     private Size mPreviewSize;
     private Handler mCameraHanlder;
-    private ExecutorService singleThreadExecutor;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -71,12 +69,10 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     private void initView(View contentView) {
         isFocusing = false;
         mPreviewSize = null;
-        singleThreadExecutor  = Executors.newSingleThreadExecutor();
         mCameraView = contentView.findViewById(R.id.camera_view);
         mProgressBtn = contentView.findViewById(R.id.progress_btn);
         mFocusView = contentView.findViewById(R.id.focus_view);
         mSwitchView = contentView.findViewById(R.id.switch_view);
-        mImageView = contentView.findViewById(R.id.image_view);
 
         mCameraSensor = new CameraSensor(getContext());
         mCameraSensor.setCameraSensorListener(this);
@@ -153,19 +149,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onSurfaceViewFrame(final int width, final int height, final ByteBuffer buffer) {
-        singleThreadExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                final Bitmap bitmap=Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                bitmap.copyPixelsFromBuffer(buffer);
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mImageView.setImageBitmap(bitmap);
-                    }
-                });
-            }
-        });
+
     }
 
     public void startPreview() {

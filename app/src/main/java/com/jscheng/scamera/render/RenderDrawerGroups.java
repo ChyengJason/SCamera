@@ -124,11 +124,7 @@ public class RenderDrawerGroups {
         int outputTexture = 0;
         for (int i = 0; i < mRenderDrawers.size(); i++) {
             currentRender = mRenderDrawers.get(i);
-            if (i != mRenderDrawers.size() - 1) {
-                outputTexture = drawRender(currentRender, true, inputTexture, false);
-            } else {
-                outputTexture = drawRender(currentRender, false, inputTexture, true);
-            }
+            outputTexture = drawRender(currentRender, true, inputTexture, false);
             inputTexture = outputTexture;
         }
     }
