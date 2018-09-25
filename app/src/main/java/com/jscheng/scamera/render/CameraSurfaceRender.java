@@ -26,6 +26,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         mRenderGroups.addRenderDrawer(new OriginalRenderDrawer());
         mRenderGroups.addRenderDrawer(new WaterMarkRenderDrawer(context));
         mRenderGroups.addRenderDrawer(new DisplayRenderDrawer());
+        mRenderGroups.addRenderDrawer(new RecordRenderDrawer());
     }
 
     @Override

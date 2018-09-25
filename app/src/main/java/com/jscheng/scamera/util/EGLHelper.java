@@ -4,6 +4,7 @@ import android.opengl.EGL14;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
+import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
 import android.util.Log;
 
@@ -23,12 +24,16 @@ public class EGLHelper {
     public void createGL() {
         // 设置显示设备
         setDisplay(EGL14.EGL_DEFAULT_DISPLAY);
-
         // 设置属性
         setConfig();
-
         // 创建上下文
         createContext();
+    }
+
+    public void createGL(EGLContext mEglContext) {
+        this.mEglContext = mEglContext;
+        setDisplay(EGL14.EGL_DEFAULT_DISPLAY);
+        setConfig();
     }
 
     /**
@@ -122,11 +127,15 @@ public class EGLHelper {
         return makeCurrent(surface, mEglContext);
     }
 
+    public void setPresentationTime(EGLSurface surface, long timeStamp) {
+        EGLExt.eglPresentationTimeANDROID(mEglDisplay, surface, timeStamp);
+    }
+
     public void swapBuffers(EGLSurface surface) {
         EGL14.eglSwapBuffers(mEglDisplay, surface);
     }
 
-    public boolean destroyGLES(EGLSurface surface, EGLContext context) {
+    public boolean destroyGL(EGLSurface surface, EGLContext context) {
         EGL14.eglMakeCurrent(mEglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);
         if (surface != null) {
             EGL14.eglDestroySurface(mEglDisplay, surface);
