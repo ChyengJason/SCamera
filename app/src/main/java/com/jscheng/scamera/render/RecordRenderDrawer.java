@@ -142,11 +142,14 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     private void prepareVideoEncoder(EGLContext context, int width, int height) {
         try {
             mVideoPath = StorageUtil.getVedioPath(true) + "glvideo.mp4";
-            mVideoEncoder = new VideoEncoder(width, height, 1000000, new File(mVideoPath));
+            mVideoEncoder = new VideoEncoder(width, height, new File(mVideoPath));
             mEglHelper = new EGLHelper();
             mEglHelper.createGL(context);
             mEglSurface = mEglHelper.createWindowSurface(mVideoEncoder.getInputSurface());
-            mEglHelper.makeCurrent(mEglSurface);
+            boolean error = mEglHelper.makeCurrent(mEglSurface);
+            if (!error) {
+                Log.e(TAG, "prepareVideoEncoder: make current error");
+            }
             onCreated();
         } catch (IOException e) {
             e.printStackTrace();
@@ -162,10 +165,14 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         mEglHelper.destroyGL();
         mEglHelper.createGL(context);
         mEglSurface = mEglHelper.createWindowSurface(mVideoEncoder.getInputSurface());
-        mEglHelper.makeCurrent(mEglSurface);
+        boolean error = mEglHelper.makeCurrent(mEglSurface);
+        if (!error) {
+            Log.e(TAG, "prepareVideoEncoder: make current error");
+        }
     }
 
     private void updateTextureId(int mTextureId) {
+        Log.d(TAG, "updateTextureId: " + mTextureId);
         this.mTextureId = mTextureId;
     }
 
@@ -197,13 +204,18 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     @Override
     protected void onCreated() {
         mProgram = GlesUtil.createProgram(getVertexSource(), getFragmentSource());
+        av_Position = GLES30.glGetAttribLocation(mProgram, "av_Position");
+        af_Position = GLES30.glGetAttribLocation(mProgram, "af_Position");
+        s_Texture = GLES30.glGetUniformLocation(mProgram, "s_Texture");
+        Log.d(TAG, "onCreated: av_Position" + av_Position);
+        Log.d(TAG, "onCreated: af_Position" + af_Position);
+        Log.d(TAG, "onCreated: s_Texture" + s_Texture);
+        Log.e(TAG, "onChanged: " + GLES30.glGetError());
     }
 
     @Override
     protected void onChanged(int width, int height) {
-        av_Position = GLES30.glGetAttribLocation(mProgram, "av_Position");
-        af_Position = GLES30.glGetAttribLocation(mProgram, "af_Position");
-        s_Texture = GLES30.glGetUniformLocation(mProgram, "s_Texture");
+
     }
 
     @Override
@@ -246,9 +258,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
                 "uniform sampler2D s_Texture;\n" +
                 "void main() {\n" +
                 "   vec4 tc = texture2D(s_Texture, v_texPo);\n" +
-                "   float color = tc.r * 0.3 + tc.g * 0.59 + tc.b * 0.11;\n" +
                 "   gl_FragColor = texture2D(s_Texture, v_texPo);\n" +
-                //"    gl_FragColor = vec4(color, color, color, 1);\n" +
                 "}";
         return source;
     }

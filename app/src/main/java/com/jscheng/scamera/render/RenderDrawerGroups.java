@@ -81,8 +81,8 @@ public class RenderDrawerGroups {
         }
         int inputTexture = drawRender(mOriginalDrawer, true, mInputTexture, timestamp, transformMatrix);
         inputTexture = drawRender(mWaterMarkDrawer, true, inputTexture, timestamp, transformMatrix);
-        drawRender(mDisplayDrawer, false, inputTexture, timestamp, transformMatrix);
-        drawRender(mRecordDrawer, false, inputTexture, timestamp, transformMatrix);
+        inputTexture = drawRender(mDisplayDrawer, false, inputTexture, timestamp, transformMatrix);
+        inputTexture = drawRender(mRecordDrawer, false, inputTexture, timestamp, transformMatrix);
     }
 
     public void startRecord() {

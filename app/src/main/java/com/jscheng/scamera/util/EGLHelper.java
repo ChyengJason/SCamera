@@ -129,12 +129,20 @@ public class EGLHelper {
         return makeCurrent(surface, mEglContext);
     }
 
-    public void setPresentationTime(EGLSurface surface, long timeStamp) {
-        EGLExt.eglPresentationTimeANDROID(mEglDisplay, surface, timeStamp);
+    public boolean setPresentationTime(EGLSurface surface, long timeStamp) {
+        if (!EGLExt.eglPresentationTimeANDROID(mEglDisplay, surface, timeStamp)) {
+            Log.d(TAG, "setPresentationTime" + EGL14.eglGetError());
+            return false;
+        }
+        return true;
     }
 
-    public void swapBuffers(EGLSurface surface) {
-        EGL14.eglSwapBuffers(mEglDisplay, surface);
+    public boolean swapBuffers(EGLSurface surface) {
+        if (!EGL14.eglSwapBuffers(mEglDisplay, surface)) {
+            Log.d(TAG, "swapBuffers" + EGL14.eglGetError());
+            return false;
+        }
+        return true;
     }
 
     public boolean destroyGL(EGLSurface surface, EGLContext context) {

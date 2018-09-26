@@ -27,8 +27,9 @@ public class VideoEncoder {
     private int mTrackIndex;
     private boolean mMuxerStarted;
 
-    public VideoEncoder(int width, int height, int bitRate, File outputFile)
+    public VideoEncoder(int width, int height, File outputFile)
             throws IOException {
+        int bitRate = height * width * 3 * 8 * FRAME_RATE / 256;
         mBufferInfo = new MediaCodec.BufferInfo();
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT,
