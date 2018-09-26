@@ -3,13 +3,15 @@ package com.jscheng.scamera.render;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
-import com.jscheng.scamera.render.image.WaterMarkRenderDrawer;
-import com.jscheng.scamera.util.GlesUtil;
+import android.util.Log;
 
-import java.nio.ByteBuffer;
+import com.jscheng.scamera.util.GlesUtil;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import static com.jscheng.scamera.util.LogUtil.TAG;
+
 /**
  * Created By Chengjunsen on 2018/8/27
  */
@@ -20,13 +22,12 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
     private int width, height;
     private int mCameraTextureId;
     private SurfaceTexture mCameraTexture;
+    private float[] mTransformMatrix;
+    private long timestamp;
 
     public CameraSurfaceRender(Context context) {
-        this.mRenderGroups = new RenderDrawerGroups();
-        mRenderGroups.addRenderDrawer(new OriginalRenderDrawer());
-        mRenderGroups.addRenderDrawer(new WaterMarkRenderDrawer(context));
-        mRenderGroups.addRenderDrawer(new DisplayRenderDrawer());
-        mRenderGroups.addRenderDrawer(new RecordRenderDrawer());
+        this.mRenderGroups = new RenderDrawerGroups(context);
+        mTransformMatrix = new float[16];
     }
 
     @Override
@@ -66,13 +67,12 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl10) {
         if (mCameraTexture != null) {
             mCameraTexture.updateTexImage();
+            timestamp = mCameraTexture.getTimestamp();
+            mCameraTexture.getTransformMatrix(mTransformMatrix);
+            mRenderGroups.draw(timestamp, mTransformMatrix);
         }
-        mRenderGroups.draw();
         if (mCallback != null) {
             mCallback.onDraw();
-        }
-        if (mCallback != null && mRenderGroups.getByteBuffer() != null) {
-            mCallback.onFrame(width, height, mRenderGroups.getByteBuffer());
         }
     }
 
@@ -95,11 +95,18 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         initCameraTexture();
     }
 
+    public void startRecord() {
+        mRenderGroups.startRecord();
+    }
+
+    public void stopRecord() {
+        mRenderGroups.stopRecord();
+    }
+
     public interface CameraSufaceRenderCallback {
         void onRequestRender();
         void onCreate();
         void onChanged(int width, int height);
         void onDraw();
-        void onFrame(int width, int height, ByteBuffer buffer);
     }
 }

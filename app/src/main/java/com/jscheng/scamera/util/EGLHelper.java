@@ -1,5 +1,6 @@
 package com.jscheng.scamera.util;
 
+import android.content.Context;
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
@@ -27,13 +28,13 @@ public class EGLHelper {
         // 设置属性
         setConfig();
         // 创建上下文
-        createContext();
+        createContext(EGL14.EGL_NO_CONTEXT);
     }
 
     public void createGL(EGLContext mEglContext) {
-        this.mEglContext = mEglContext;
         setDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         setConfig();
+        createContext(mEglContext);
     }
 
     /**
@@ -54,14 +55,15 @@ public class EGLHelper {
 
     public void setConfig() {
         int configAttribs[] = {
-                EGL14.EGL_BUFFER_SIZE, 32,
+//                EGL14.EGL_BUFFER_SIZE, 32,
                 EGL14.EGL_ALPHA_SIZE, 8,
                 EGL14.EGL_BLUE_SIZE, 8,
                 EGL14.EGL_GREEN_SIZE, 8,
                 EGL14.EGL_RED_SIZE, 8,
-                EGL14.EGL_DEPTH_SIZE, 8,
-                EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
-                EGL14.EGL_SURFACE_TYPE, EGL14.EGL_WINDOW_BIT,
+//                EGL14.EGL_DEPTH_SIZE, 8,
+                EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT | EGLExt.EGL_OPENGL_ES3_BIT_KHR,
+//                EGL14.EGL_SURFACE_TYPE, EGL14.EGL_WINDOW_BIT,
+                EGL14.EGL_NONE, 0,
                 EGL14.EGL_NONE
         };
         setConfig(configAttribs);
@@ -76,13 +78,13 @@ public class EGLHelper {
         mEglConfig = configs[0];
     }
 
-    public void createContext() {
+    public void createContext(EGLContext context) {
         // 创建openGL上下文
         int contextAttribs[] = {
                 EGL14.EGL_CONTEXT_CLIENT_VERSION, 3,
                 EGL14.EGL_NONE
         };
-        mEglContext = EGL14.eglCreateContext(mEglDisplay, mEglConfig, EGL14.EGL_NO_CONTEXT, contextAttribs, 0);
+        mEglContext = EGL14.eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs, 0);
         if (mEglContext == EGL14.EGL_NO_CONTEXT) {
             throw new RuntimeException("EGL error " + EGL14.eglGetError());
         }

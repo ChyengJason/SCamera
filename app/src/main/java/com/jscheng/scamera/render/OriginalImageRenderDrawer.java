@@ -1,4 +1,4 @@
-package com.jscheng.scamera.render.image;
+package com.jscheng.scamera.render;
 
 import android.content.Context;
 import android.opengl.GLES30;

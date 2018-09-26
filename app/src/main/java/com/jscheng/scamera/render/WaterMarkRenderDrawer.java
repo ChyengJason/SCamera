@@ -1,4 +1,4 @@
-package com.jscheng.scamera.render.image;
+package com.jscheng.scamera.render;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -47,7 +47,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     }
 
     @Override
-    public void draw() {
+    public void draw(long timestamp, float[] transformMatrix) {
         useProgram();
         //clear();
         viewPort(80, 75, mBitmap.getWidth(), mBitmap.getHeight());

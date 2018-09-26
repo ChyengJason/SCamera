@@ -91,7 +91,7 @@ public abstract class BaseRenderDrawer {
         onChanged(width, height);
     }
 
-    public void draw(){
+    public void draw(long timestamp, float[] transformMatrix){
         clear();
         useProgram();
         viewPort(0, 0, width, height);

@@ -2,6 +2,7 @@ package com.jscheng.scamera.widget;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.opengl.EGL14;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 import com.jscheng.scamera.render.CameraSurfaceRender;
@@ -60,13 +61,6 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
 
     }
 
-    @Override
-    public void onFrame(int width, int height, ByteBuffer buffer) {
-        if (mCallback != null) {
-            mCallback.onSurfaceViewFrame(width, height, buffer);
-        }
-    }
-
     public void setCallback(CameraGLSurfaceViewCallback mCallback) {
         this.mCallback = mCallback;
     }
@@ -79,9 +73,16 @@ public class CameraGLSurfaceView extends GLSurfaceView implements CameraSurfaceR
         mRender.resumeSurfaceTexture();
     }
 
+    public void startRecord() {
+        mRender.startRecord();
+    }
+
+    public void stopRecord() {
+        mRender.stopRecord();
+    }
+
     public interface CameraGLSurfaceViewCallback {
         void onSurfaceViewCreate(SurfaceTexture texture);
         void onSurfaceViewChange(int width, int height);
-        void onSurfaceViewFrame(int width, int height, ByteBuffer buffer);
     }
 }

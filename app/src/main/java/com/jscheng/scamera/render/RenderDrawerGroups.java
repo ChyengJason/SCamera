@@ -1,16 +1,10 @@
 package com.jscheng.scamera.render;
 
-import android.annotation.SuppressLint;
+import android.content.Context;
 import android.opengl.GLES30;
 import android.util.Log;
 
 import com.jscheng.scamera.util.GlesUtil;
-
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.jscheng.scamera.util.LogUtil.TAG;
 
@@ -19,56 +13,24 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
  * 统一管理所有的RenderDrawer 和 FBO
  */
 public class RenderDrawerGroups {
-    public List<BaseRenderDrawer> mRenderDrawers;
     private int mInputTexture;
     private int mFrameBuffer;
-    private int[] mPixelBuffers;
-    private int mPboIndex;
-    private int mPboNewIndex;
-    private ByteBuffer byteBuffer;
+    private OriginalRenderDrawer mOriginalDrawer;
+    private WaterMarkRenderDrawer mWaterMarkDrawer;
+    private DisplayRenderDrawer mDisplayDrawer;
+    private RecordRenderDrawer mRecordDrawer;
 
-    public RenderDrawerGroups() {
-        mRenderDrawers = new ArrayList<>();
-        mPixelBuffers = new int[2];
-        mFrameBuffer = 0;
-        mInputTexture = 0;
-        mPboIndex = 0;
-        mPboNewIndex = 1;
-        byteBuffer = null;
-    }
-
-    public void addRenderDrawer(BaseRenderDrawer drawer) {
-        mRenderDrawers.add(drawer);
-    }
-
-    public void removeRenderDrawer(BaseRenderDrawer drawer) {
-        mRenderDrawers.remove(drawer);
-    }
-
-    public boolean isEmpty() {
-        return mRenderDrawers.isEmpty();
+    public RenderDrawerGroups(Context context) {
+        this.mOriginalDrawer = new OriginalRenderDrawer();
+        this.mWaterMarkDrawer = new WaterMarkRenderDrawer(context);
+        this.mDisplayDrawer = new DisplayRenderDrawer();
+        this.mRecordDrawer = new RecordRenderDrawer();
+        this.mFrameBuffer = 0;
+        this.mInputTexture = 0;
     }
 
     public void setInputTexture(int texture) {
         this.mInputTexture = texture;
-    }
-
-    @SuppressLint("NewApi")
-    public void bindPixelBuffer(int width, int height) {
-        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, mPixelBuffers[mPboIndex]);
-        // 读取到PBO中
-        long readPixelsTime = System.currentTimeMillis();
-        GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE,0);
-        Log.e(TAG, "bindPixelBuffer glReadPixels: " + (System.currentTimeMillis() - readPixelsTime ) );
-        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, mPixelBuffers[mPboNewIndex]);
-        // 映射到CPU内存中
-        long mapBufferRangeTime = System.currentTimeMillis();
-        byteBuffer = (ByteBuffer) GLES30.glMapBufferRange(GLES30.GL_PIXEL_PACK_BUFFER, 0, width * height * 4, GLES30.GL_MAP_READ_BIT);
-        Log.e(TAG, "bindPixelBuffer glMapBufferRange: " + (System.currentTimeMillis() - mapBufferRangeTime) );
-        GLES30.glUnmapBuffer(GLES30.GL_PIXEL_PACK_BUFFER);
-        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, 0);
-        mPboIndex = (mPboIndex + 1) % mPixelBuffers.length;
-        mPboNewIndex = (mPboNewIndex + 1) % mPixelBuffers.length;
     }
 
     public void bindFrameBuffer(int textureId) {
@@ -86,51 +48,48 @@ public class RenderDrawerGroups {
     }
 
     public void create() {
-        for (BaseRenderDrawer drawer : mRenderDrawers) {
-            drawer.create();
-        }
+        this.mOriginalDrawer.create();
+        this.mWaterMarkDrawer.create();
+        this.mDisplayDrawer.create();
+        this.mRecordDrawer.create();
     }
 
     public void surfaceChangedSize(int width, int height) {
         mFrameBuffer = GlesUtil.createFrameBuffer();
-        GlesUtil.createPixelsBuffers(mPixelBuffers, width, height);
-        for (BaseRenderDrawer drawer : mRenderDrawers) {
-            drawer.surfaceChangedSize(width, height);
-        }
+        this.mOriginalDrawer.surfaceChangedSize(width, height);
+        this.mWaterMarkDrawer.surfaceChangedSize(width, height);
+        this.mDisplayDrawer.surfaceChangedSize(width, height);
+        this.mRecordDrawer.surfaceChangedSize(width, height);
     }
 
-    public int drawRender(BaseRenderDrawer drawer, boolean useFrameBuffer, int inputTexture, boolean readPixles) {
+    public int drawRender(BaseRenderDrawer drawer, boolean useFrameBuffer, int inputTexture, long timestamp, float[] transformMatrix) {
         drawer.setInputTextureId(inputTexture);
         if (useFrameBuffer) {
             bindFrameBuffer(drawer.getOutputTextureId());
         }
-        drawer.draw();
-        if (readPixles) {
-            bindPixelBuffer(drawer.width, drawer.height);
-        }
+        drawer.draw(timestamp, transformMatrix);
         if (useFrameBuffer) {
             unBindFrameBuffer();
         }
         return drawer.getOutputTextureId();
     }
 
-    public void draw() {
-        if (mInputTexture == 0 || mFrameBuffer == 0 || isEmpty()) {
+    public void draw(long timestamp, float[] transformMatrix) {
+        if (mInputTexture == 0 || mFrameBuffer == 0) {
             Log.e(TAG, "draw: mInputTexture or mFramebuffer or list is zero");
             return;
         }
-        BaseRenderDrawer currentRender = null;
-        int inputTexture = mInputTexture;
-        int outputTexture = 0;
-        for (int i = 0; i < mRenderDrawers.size(); i++) {
-            currentRender = mRenderDrawers.get(i);
-            outputTexture = drawRender(currentRender, true, inputTexture, false);
-            inputTexture = outputTexture;
-        }
+        int inputTexture = drawRender(mOriginalDrawer, true, mInputTexture, timestamp, transformMatrix);
+        inputTexture = drawRender(mWaterMarkDrawer, true, inputTexture, timestamp, transformMatrix);
+        drawRender(mDisplayDrawer, false, inputTexture, timestamp, transformMatrix);
+        drawRender(mRecordDrawer, false, inputTexture, timestamp, transformMatrix);
     }
 
-    public ByteBuffer getByteBuffer() {
-        return byteBuffer;
+    public void startRecord() {
+        mRecordDrawer.startRecord();
     }
 
+    public void stopRecord() {
+        mRecordDrawer.stopRecord();
+    }
 }

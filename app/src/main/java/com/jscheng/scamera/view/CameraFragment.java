@@ -147,11 +147,6 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         mCameraHanlder.sendEmptyMessage(MSG_START_PREVIEW);
     }
 
-    @Override
-    public void onSurfaceViewFrame(final int width, final int height, final ByteBuffer buffer) {
-
-    }
-
     public void startPreview() {
         if (mPreviewSize != null && requestCameraPermission() ) {
             if (CameraUtil.getCamera() == null) {
@@ -247,12 +242,13 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     @Override
     public void onStartLongPress() {
         if (requestStoragePermission()) {
-
+            mCameraView.startRecord();
         }
     }
 
     @Override
     public void onEndLongPress() {
+        mCameraView.stopRecord();
     }
 
     @Override

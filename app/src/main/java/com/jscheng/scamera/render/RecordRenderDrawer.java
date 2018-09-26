@@ -7,6 +7,8 @@ import android.opengl.GLES30;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
+
 import com.jscheng.scamera.record.VideoEncoder;
 import com.jscheng.scamera.util.EGLHelper;
 import com.jscheng.scamera.util.GlesUtil;
@@ -14,7 +16,7 @@ import com.jscheng.scamera.util.StorageUtil;
 import java.io.File;
 import java.io.IOException;
 
-import javax.microedition.khronos.egl.EGL;
+import static com.jscheng.scamera.util.LogUtil.TAG;
 
 /**
  * Created By Chengjunsen on 2018/9/21
@@ -27,6 +29,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     private Handler mMsgHandler;
     private EGLHelper mEglHelper;
     private EGLSurface mEglSurface;
+    private boolean isRecording;
 
     private int av_Position;
     private int af_Position;
@@ -37,13 +40,16 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         this.mVideoEncoder = null;
         this.mEglHelper = null;
         this.mTextureId = -1;
+        this.isRecording = false;
         new Thread(this).start();
     }
 
     @Override
     public void setInputTextureId(int textureId) {
-        Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_UPDATE_TEXTUREID, textureId);
-        mMsgHandler.sendMessage(msg);
+        if (isRecording) {
+            Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_UPDATE_TEXTUREID, textureId);
+            mMsgHandler.sendMessage(msg);
+        }
     }
 
     @Override
@@ -55,18 +61,32 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     public void create() {
     }
 
+    public void startRecord() {
+        Log.d(TAG, "Record startRecord");
+        Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_START_RECORD, width, height, EGL14.eglGetCurrentContext());
+        mMsgHandler.sendMessage(msg);
+        isRecording = true;
+    }
+
+    public void stopRecord() {
+        Log.d(TAG, "Record stopRecord");
+        isRecording = false;
+        mMsgHandler.sendMessage(mMsgHandler.obtainMessage(MsgHandler.MSG_STOP_RECORD));
+        mMsgHandler.sendMessage(mMsgHandler.obtainMessage(MsgHandler.MSG_QUIT));
+    }
+
     @Override
     public void surfaceChangedSize(int width, int height) {
         this.width = width;
         this.height = height;
-        Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_START_RECORD, width, height, EGL14.eglGetCurrentContext());
-        mMsgHandler.sendMessage(msg);
     }
 
     @Override
-    public void draw() {
-        Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_FRAME, System.currentTimeMillis());
-        mMsgHandler.sendMessage(msg);
+    public void draw(long timestamp, float[] transformMatrix) {
+        if (isRecording) {
+            Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_FRAME, timestamp);
+            mMsgHandler.sendMessage(msg);
+        }
     }
 
     @Override
@@ -96,6 +116,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
                     prepareVideoEncoder((EGLContext) msg.obj, msg.arg1, msg.arg2);
                     break;
                 case MSG_STOP_RECORD:
+                    stopVideoEncoder();
                     break;
                 case MSG_UPDATE_CONTEXT:
                     updateEglContext((EGLContext) msg.obj);
@@ -107,7 +128,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
                     updateTextureId((int)msg.obj);
                     break;
                 case MSG_FRAME:
-                    drawFrame(msg.arg1);
+                    drawFrame((long)msg.obj);
                     break;
                 case MSG_QUIT:
                     release();
@@ -132,6 +153,10 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         }
     }
 
+    private void stopVideoEncoder() {
+        mVideoEncoder.drainEncoder(true);
+    }
+
     private void updateEglContext(EGLContext context) {
         mEglSurface = EGL14.EGL_NO_SURFACE;
         mEglHelper.destroyGL();
@@ -145,24 +170,28 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     }
 
     private void drawFrame(long timeStamp) {
+        Log.e(TAG, "drawFrame: " + timeStamp );
+        mEglHelper.makeCurrent(mEglSurface);
         mVideoEncoder.drainEncoder(false);
+        onDraw();
         mEglHelper.setPresentationTime(mEglSurface, timeStamp);
         mEglHelper.swapBuffers(mEglSurface);
-        onDraw();
     }
 
-    public void updateChangedSize(int width, int height) {
+    private void updateChangedSize(int width, int height) {
         onChanged(width, height);
     }
 
-    public void release() {
-        mEglHelper.destroySurface(mEglSurface);
-        mEglHelper.destroyGL();
-        mEglSurface = EGL14.EGL_NO_SURFACE;
-        mVideoEncoder.release();
-        mEglHelper = null;
-        mVideoEncoder = null;
-        Looper.myLooper().quit();
+    private void release() {
+        if (mEglHelper != null) {
+            mEglHelper.destroySurface(mEglSurface);
+            mEglHelper.destroyGL();
+            mEglSurface = EGL14.EGL_NO_SURFACE;
+            mVideoEncoder.release();
+            mEglHelper = null;
+            mVideoEncoder = null;
+            Looper.myLooper().quit();
+        }
     }
 
     @Override
