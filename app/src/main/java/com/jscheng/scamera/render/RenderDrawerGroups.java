@@ -1,6 +1,7 @@
 package com.jscheng.scamera.render;
 
 import android.content.Context;
+import android.opengl.EGLContext;
 import android.opengl.GLES30;
 import android.util.Log;
 
@@ -24,7 +25,7 @@ public class RenderDrawerGroups {
         this.mOriginalDrawer = new OriginalRenderDrawer();
         this.mWaterMarkDrawer = new WaterMarkRenderDrawer(context);
         this.mDisplayDrawer = new DisplayRenderDrawer();
-        this.mRecordDrawer = new RecordRenderDrawer();
+        this.mRecordDrawer = new RecordRenderDrawer(context);
         this.mFrameBuffer = 0;
         this.mInputTexture = 0;
     }
@@ -65,7 +66,7 @@ public class RenderDrawerGroups {
         int textureId = this.mOriginalDrawer.getOutputTextureId();
         mWaterMarkDrawer.setInputTextureId(textureId);
         mDisplayDrawer.setInputTextureId(textureId);
-        mRecordDrawer.setInputTextureId(mInputTexture);
+        mRecordDrawer.setInputTextureId(textureId);
     }
 
     public void drawRender(BaseRenderDrawer drawer, boolean useFrameBuffer, long timestamp, float[] transformMatrix) {

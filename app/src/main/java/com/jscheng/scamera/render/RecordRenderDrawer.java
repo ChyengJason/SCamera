@@ -1,5 +1,8 @@
 package com.jscheng.scamera.render;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.opengl.EGL14;
 import android.opengl.EGLContext;
 import android.opengl.EGLSurface;
@@ -9,6 +12,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.jscheng.scamera.R;
 import com.jscheng.scamera.record.VideoEncoder;
 import com.jscheng.scamera.util.EGLHelper;
 import com.jscheng.scamera.util.GlesUtil;
@@ -30,13 +34,14 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     private EGLHelper mEglHelper;
     private EGLSurface mEglSurface;
     private boolean isRecording;
+    private EGLContext mEglContext;
 
     private int av_Position;
     private int af_Position;
     private int s_Texture;
 
 
-    public RecordRenderDrawer() {
+    public RecordRenderDrawer(Context context) {
         this.mVideoEncoder = null;
         this.mEglHelper = null;
         this.mTextureId = 0;
@@ -57,17 +62,18 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
 
     @Override
     public void create() {
+        mEglContext = EGL14.eglGetCurrentContext();
     }
 
     public void startRecord() {
-        Log.d(TAG, "Record startRecord");
-        Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_START_RECORD, width, height, EGL14.eglGetCurrentContext());
+        Log.d(TAG, "startRecord context : " + mEglContext.toString());
+        Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_START_RECORD, width, height, mEglContext);
         mMsgHandler.sendMessage(msg);
         isRecording = true;
     }
 
     public void stopRecord() {
-        Log.d(TAG, "Record stopRecord");
+        Log.d(TAG, "stopRecord");
         isRecording = false;
         mMsgHandler.sendMessage(mMsgHandler.obtainMessage(MsgHandler.MSG_STOP_RECORD));
         mMsgHandler.sendMessage(mMsgHandler.obtainMessage(MsgHandler.MSG_QUIT));
@@ -135,10 +141,10 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
 
     private void prepareVideoEncoder(EGLContext context, int width, int height) {
         try {
-            mVideoPath = StorageUtil.getVedioPath(true) + "glvideo.mp4";
-            mVideoEncoder = new VideoEncoder(width, height, new File(mVideoPath));
             mEglHelper = new EGLHelper();
             mEglHelper.createGL(context);
+            mVideoPath = StorageUtil.getVedioPath(true) + "glvideo.mp4";
+            mVideoEncoder = new VideoEncoder(width, height, new File(mVideoPath));
             mEglSurface = mEglHelper.createWindowSurface(mVideoEncoder.getInputSurface());
             boolean error = mEglHelper.makeCurrent(mEglSurface);
             if (!error) {
@@ -196,10 +202,10 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         av_Position = GLES30.glGetAttribLocation(mProgram, "av_Position");
         af_Position = GLES30.glGetAttribLocation(mProgram, "af_Position");
         s_Texture = GLES30.glGetUniformLocation(mProgram, "s_Texture");
-        Log.d(TAG, "onCreated: av_Position" + av_Position);
-        Log.d(TAG, "onCreated: af_Position" + af_Position);
-        Log.d(TAG, "onCreated: s_Texture" + s_Texture);
-        Log.e(TAG, "onChanged: " + GLES30.glGetError());
+        Log.d(TAG, "onCreated: av_Position " + av_Position);
+        Log.d(TAG, "onCreated: af_Position " + af_Position);
+        Log.d(TAG, "onCreated: s_Texture " + s_Texture);
+        Log.e(TAG, "onCreated: error " + GLES30.glGetError());
     }
 
     @Override
@@ -216,16 +222,16 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         GLES30.glEnableVertexAttribArray(av_Position);
         GLES30.glEnableVertexAttribArray(af_Position);
         GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
-         GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mBackTextureBuffer);
+        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mDisplayTextureBuffer);
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureId);
         GLES30.glUniform1i(s_Texture, 0);
+        // 绘制 GLES30.GL_TRIANGLE_STRIP:复用坐标
         GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, VertexCount);
-
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
         GLES30.glDisableVertexAttribArray(av_Position);
         GLES30.glDisableVertexAttribArray(af_Position);
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
     }
 
     @Override
@@ -242,13 +248,13 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
 
     @Override
     protected String getFragmentSource() {
-        final String source = "#extension GL_OES_EGL_image_external : require \n" +
-                "precision mediump float; " +
-                "varying vec2 v_texPo; " +
-                "uniform samplerExternalOES s_Texture; " +
-                "void main() { " +
-                "   gl_FragColor = texture2D(s_Texture, v_texPo); " +
-                "} ";
+        final String source = "precision mediump float;\n" +
+                "varying vec2 v_texPo;\n" +
+                "uniform sampler2D s_Texture;\n" +
+                "void main() {\n" +
+                "   vec4 tc = texture2D(s_Texture, v_texPo);\n" +
+                "   gl_FragColor = texture2D(s_Texture, v_texPo);\n" +
+                "}";
         return source;
     }
 }

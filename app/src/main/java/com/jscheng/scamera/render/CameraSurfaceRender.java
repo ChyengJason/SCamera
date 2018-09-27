@@ -2,6 +2,7 @@ package com.jscheng.scamera.render;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.opengl.EGL14;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 
@@ -58,6 +59,7 @@ public class CameraSurfaceRender implements GLSurfaceView.Renderer {
         this.width = width;
         this.height = height;
         mRenderGroups.surfaceChangedSize(width, height);
+        Log.d(TAG, "currentEGLContext: " + EGL14.eglGetCurrentContext().toString());
         if (mCallback != null) {
             mCallback.onChanged(width, height);
         }
