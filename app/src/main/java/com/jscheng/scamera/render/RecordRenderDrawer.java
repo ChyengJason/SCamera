@@ -39,17 +39,15 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     public RecordRenderDrawer() {
         this.mVideoEncoder = null;
         this.mEglHelper = null;
-        this.mTextureId = -1;
+        this.mTextureId = 0;
         this.isRecording = false;
         new Thread(this).start();
     }
 
     @Override
     public void setInputTextureId(int textureId) {
-        if (isRecording) {
-            Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_UPDATE_TEXTUREID, textureId);
-            mMsgHandler.sendMessage(msg);
-        }
+        this.mTextureId = textureId;
+        Log.d(TAG, "setInputTextureId: " + textureId);
     }
 
     @Override
@@ -100,10 +98,9 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         public static final int MSG_START_RECORD = 1;
         public static final int MSG_STOP_RECORD = 2;
         public static final int MSG_UPDATE_CONTEXT = 3;
-        public static final int MSG_UPDATE_TEXTUREID = 4;
-        public static final int MSG_UPDATE_SIZE = 5;
-        public static final int MSG_FRAME = 6;
-        public static final int MSG_QUIT = 7;
+        public static final int MSG_UPDATE_SIZE = 4;
+        public static final int MSG_FRAME = 5;
+        public static final int MSG_QUIT = 6;
 
         public MsgHandler() {
 
@@ -123,9 +120,6 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
                     break;
                 case MSG_UPDATE_SIZE:
                     updateChangedSize(msg.arg1, msg.arg2);
-                    break;
-                case MSG_UPDATE_TEXTUREID:
-                    updateTextureId((int)msg.obj);
                     break;
                 case MSG_FRAME:
                     drawFrame((long)msg.obj);
@@ -169,11 +163,6 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         if (!error) {
             Log.e(TAG, "prepareVideoEncoder: make current error");
         }
-    }
-
-    private void updateTextureId(int mTextureId) {
-        Log.d(TAG, "updateTextureId: " + mTextureId);
-        this.mTextureId = mTextureId;
     }
 
     private void drawFrame(long timeStamp) {
@@ -227,16 +216,16 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         GLES30.glEnableVertexAttribArray(av_Position);
         GLES30.glEnableVertexAttribArray(af_Position);
         GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
-        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mDisplayTextureBuffer);
+         GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mBackTextureBuffer);
 
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureId);
         GLES30.glUniform1i(s_Texture, 0);
-        // 绘制 GLES30.GL_TRIANGLE_STRIP:复用坐标
         GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, VertexCount);
+
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
         GLES30.glDisableVertexAttribArray(av_Position);
         GLES30.glDisableVertexAttribArray(af_Position);
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
     }
 
     @Override
@@ -253,13 +242,13 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
 
     @Override
     protected String getFragmentSource() {
-        final String source = "precision mediump float;\n" +
-                "varying vec2 v_texPo;\n" +
-                "uniform sampler2D s_Texture;\n" +
-                "void main() {\n" +
-                "   vec4 tc = texture2D(s_Texture, v_texPo);\n" +
-                "   gl_FragColor = texture2D(s_Texture, v_texPo);\n" +
-                "}";
+        final String source = "#extension GL_OES_EGL_image_external : require \n" +
+                "precision mediump float; " +
+                "varying vec2 v_texPo; " +
+                "uniform samplerExternalOES s_Texture; " +
+                "void main() { " +
+                "   gl_FragColor = texture2D(s_Texture, v_texPo); " +
+                "} ";
         return source;
     }
 }

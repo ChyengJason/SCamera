@@ -56,14 +56,19 @@ public class RenderDrawerGroups {
 
     public void surfaceChangedSize(int width, int height) {
         mFrameBuffer = GlesUtil.createFrameBuffer();
-        this.mOriginalDrawer.surfaceChangedSize(width, height);
-        this.mWaterMarkDrawer.surfaceChangedSize(width, height);
-        this.mDisplayDrawer.surfaceChangedSize(width, height);
-        this.mRecordDrawer.surfaceChangedSize(width, height);
+        mOriginalDrawer.surfaceChangedSize(width, height);
+        mWaterMarkDrawer.surfaceChangedSize(width, height);
+        mDisplayDrawer.surfaceChangedSize(width, height);
+        mRecordDrawer.surfaceChangedSize(width, height);
+
+        this.mOriginalDrawer.setInputTextureId(mInputTexture);
+        int textureId = this.mOriginalDrawer.getOutputTextureId();
+        mWaterMarkDrawer.setInputTextureId(textureId);
+        mDisplayDrawer.setInputTextureId(textureId);
+        mRecordDrawer.setInputTextureId(mInputTexture);
     }
 
-    public int drawRender(BaseRenderDrawer drawer, boolean useFrameBuffer, int inputTexture, long timestamp, float[] transformMatrix) {
-        drawer.setInputTextureId(inputTexture);
+    public void drawRender(BaseRenderDrawer drawer, boolean useFrameBuffer, long timestamp, float[] transformMatrix) {
         if (useFrameBuffer) {
             bindFrameBuffer(drawer.getOutputTextureId());
         }
@@ -71,7 +76,6 @@ public class RenderDrawerGroups {
         if (useFrameBuffer) {
             unBindFrameBuffer();
         }
-        return drawer.getOutputTextureId();
     }
 
     public void draw(long timestamp, float[] transformMatrix) {
@@ -79,10 +83,10 @@ public class RenderDrawerGroups {
             Log.e(TAG, "draw: mInputTexture or mFramebuffer or list is zero");
             return;
         }
-        int inputTexture = drawRender(mOriginalDrawer, true, mInputTexture, timestamp, transformMatrix);
-        inputTexture = drawRender(mWaterMarkDrawer, true, inputTexture, timestamp, transformMatrix);
-        inputTexture = drawRender(mDisplayDrawer, false, inputTexture, timestamp, transformMatrix);
-        inputTexture = drawRender(mRecordDrawer, false, inputTexture, timestamp, transformMatrix);
+        drawRender(mOriginalDrawer, true, timestamp, transformMatrix);
+        drawRender(mWaterMarkDrawer, true, timestamp, transformMatrix);
+        drawRender(mDisplayDrawer, false,  timestamp, transformMatrix);
+        drawRender(mRecordDrawer, false, timestamp, transformMatrix);
     }
 
     public void startRecord() {

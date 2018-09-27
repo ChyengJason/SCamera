@@ -9,6 +9,8 @@ import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
 import android.util.Log;
 
+import javax.microedition.khronos.egl.EGL10;
+
 import static com.jscheng.scamera.util.LogUtil.TAG;
 
 /**
@@ -55,16 +57,14 @@ public class EGLHelper {
 
     public void setConfig() {
         int configAttribs[] = {
-//                EGL14.EGL_BUFFER_SIZE, 32,
-                EGL14.EGL_ALPHA_SIZE, 8,
-                EGL14.EGL_BLUE_SIZE, 8,
-                EGL14.EGL_GREEN_SIZE, 8,
-                EGL14.EGL_RED_SIZE, 8,
-//                EGL14.EGL_DEPTH_SIZE, 8,
-                EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT | EGLExt.EGL_OPENGL_ES3_BIT_KHR,
-//                EGL14.EGL_SURFACE_TYPE, EGL14.EGL_WINDOW_BIT,
-                EGL14.EGL_NONE, 0,
-                EGL14.EGL_NONE
+                EGL10.EGL_SURFACE_TYPE, EGL10.EGL_WINDOW_BIT,      // 渲染类型
+                EGL10.EGL_RED_SIZE, 8,  // 指定 RGB 中的 R 大小（bits）
+                EGL10.EGL_GREEN_SIZE, 8, // 指定 G 大小
+                EGL10.EGL_BLUE_SIZE, 8,  // 指定 B 大小
+                EGL10.EGL_ALPHA_SIZE, 8, // 指定 Alpha 大小，以上四项实际上指定了像素格式
+                EGL10.EGL_DEPTH_SIZE, 8, // 指定深度缓存 (Z Buffer) 大小
+                EGL10.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT, // 指定渲染 api 类别, 如上一小节描述，这里或者是硬编码的 4(EGL14.EGL_OPENGL_ES2_BIT)
+                EGL10.EGL_NONE  // 总是以 EGL14.EGL_NONE 结尾
         };
         setConfig(configAttribs);
     }
