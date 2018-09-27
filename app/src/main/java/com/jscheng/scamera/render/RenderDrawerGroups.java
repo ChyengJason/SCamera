@@ -85,8 +85,10 @@ public class RenderDrawerGroups {
             return;
         }
         drawRender(mOriginalDrawer, true, timestamp, transformMatrix);
-        drawRender(mWaterMarkDrawer, true, timestamp, transformMatrix);
+        // 绘制顺序会控制着 水印绘制哪一层
+        //drawRender(mWaterMarkDrawer, true, timestamp, transformMatrix);
         drawRender(mDisplayDrawer, false,  timestamp, transformMatrix);
+        drawRender(mWaterMarkDrawer, true, timestamp, transformMatrix);
         drawRender(mRecordDrawer, false, timestamp, transformMatrix);
     }
 

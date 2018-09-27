@@ -76,6 +76,9 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         Log.d(TAG, "stopRecord");
         isRecording = false;
         mMsgHandler.sendMessage(mMsgHandler.obtainMessage(MsgHandler.MSG_STOP_RECORD));
+    }
+
+    public void quit() {
         mMsgHandler.sendMessage(mMsgHandler.obtainMessage(MsgHandler.MSG_QUIT));
     }
 
@@ -88,6 +91,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     @Override
     public void draw(long timestamp, float[] transformMatrix) {
         if (isRecording) {
+            Log.d(TAG, "draw: ");
             Message msg = mMsgHandler.obtainMessage(MsgHandler.MSG_FRAME, timestamp);
             mMsgHandler.sendMessage(msg);
         }
@@ -131,7 +135,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
                     drawFrame((long)msg.obj);
                     break;
                 case MSG_QUIT:
-                    release();
+                    quitLooper();
                     break;
                 default:
                     break;
@@ -158,6 +162,14 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
 
     private void stopVideoEncoder() {
         mVideoEncoder.drainEncoder(true);
+        if (mEglHelper != null) {
+            mEglHelper.destroySurface(mEglSurface);
+            mEglHelper.destroyGL();
+            mEglSurface = EGL14.EGL_NO_SURFACE;
+            mVideoEncoder.release();
+            mEglHelper = null;
+            mVideoEncoder = null;
+        }
     }
 
     private void updateEglContext(EGLContext context) {
@@ -184,16 +196,8 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
         onChanged(width, height);
     }
 
-    private void release() {
-        if (mEglHelper != null) {
-            mEglHelper.destroySurface(mEglSurface);
-            mEglHelper.destroyGL();
-            mEglSurface = EGL14.EGL_NO_SURFACE;
-            mVideoEncoder.release();
-            mEglHelper = null;
-            mVideoEncoder = null;
-            Looper.myLooper().quit();
-        }
+    private void quitLooper() {
+        Looper.myLooper().quit();
     }
 
     @Override

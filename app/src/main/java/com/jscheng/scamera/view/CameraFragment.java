@@ -41,8 +41,7 @@ import static com.jscheng.scamera.util.LogUtil.TAG;
  * Created By Chengjunsen on 2018/8/22
  */
 public class CameraFragment extends Fragment implements CameraProgressButton.Listener, CameraGLSurfaceView.CameraGLSurfaceViewCallback, CameraSensor.CameraSensorListener{
-    private final static int CAMERA_REQUEST_CODE = 1;
-    private final static int STORE_REQUEST_CODE = 2;
+    private final static int REQUEST_CODE = 1;
     private final static int MSG_START_PREVIEW = 1;
     private final static int MSG_SWITCH_CAMERA = 2;
     private final static int MSG_RELEASE_PREVIEW = 3;
@@ -148,7 +147,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
     }
 
     public void startPreview() {
-        if (mPreviewSize != null && requestCameraPermission() ) {
+        if (mPreviewSize != null && requestPermission() ) {
             if (CameraUtil.getCamera() == null) {
                 CameraUtil.openCamera();
                 Log.e(TAG, "openCamera" );
@@ -229,7 +228,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onShortPress() {
-        if (requestStoragePermission()) {
+        if (requestPermission()) {
             takePicture();
         }
     }
@@ -241,7 +240,7 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
 
     @Override
     public void onStartLongPress() {
-        if (requestStoragePermission()) {
+        if (requestPermission()) {
             mCameraView.startRecord();
         }
     }
@@ -260,18 +259,15 @@ public class CameraFragment extends Fragment implements CameraProgressButton.Lis
         mCameraHanlder.sendEmptyMessage(MSG_ROCK);
     }
 
-    private boolean requestCameraPermission() {
-        return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.CAMERA, CAMERA_REQUEST_CODE, "请求相机权限被拒绝");
-    }
-
-    private boolean requestStoragePermission() {
-        return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.STORAGE, STORE_REQUEST_CODE, "请求访问SD卡权限被拒绝");
+    private boolean requestPermission() {
+        return PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.CAMERA, REQUEST_CODE, "请求相机权限被拒绝")
+                && PermisstionUtil.checkPermissionsAndRequest(getContext(), PermisstionUtil.STORAGE, REQUEST_CODE, "请求访问SD卡权限被拒绝");
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == CAMERA_REQUEST_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (requestCode == requestCode ) {
             mCameraHanlder.sendEmptyMessage(MSG_START_PREVIEW);
         }
     }

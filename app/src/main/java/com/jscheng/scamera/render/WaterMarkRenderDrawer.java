@@ -21,7 +21,7 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     private int sTexture;
 
     public WaterMarkRenderDrawer(Context context) {
-        mBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.camera_ok);
+        mBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.watermark);
     }
     @Override
     public void setInputTextureId(int textureId) {
@@ -50,10 +50,10 @@ public class WaterMarkRenderDrawer extends BaseRenderDrawer{
     public void draw(long timestamp, float[] transformMatrix) {
         useProgram();
         //clear();
-        viewPort(80, 75, mBitmap.getWidth(), mBitmap.getHeight());
+        viewPort(40, 75, mBitmap.getWidth() * 2, mBitmap.getHeight() * 2);
         GLES30.glDisable(GLES30.GL_DEPTH_TEST);
         GLES30.glEnable(GLES30.GL_BLEND);
-        GLES30.glBlendFunc(GLES30.GL_SRC_COLOR,GLES30.GL_DST_ALPHA);
+        GLES30.glBlendFunc(GLES30.GL_SRC_COLOR, GLES30.GL_DST_ALPHA);
         onDraw();
         GLES30.glDisable(GLES30.GL_BLEND);
     }
