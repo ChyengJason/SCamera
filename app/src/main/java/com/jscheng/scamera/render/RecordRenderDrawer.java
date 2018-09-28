@@ -184,7 +184,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     }
 
     private void drawFrame(long timeStamp) {
-        Log.e(TAG, "drawFrame: " + timeStamp );
+        Log.d(TAG, "drawFrame: " + timeStamp );
         mEglHelper.makeCurrent(mEglSurface);
         mVideoEncoder.drainEncoder(false);
         onDraw();
@@ -203,6 +203,7 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
     @Override
     protected void onCreated() {
         mProgram = GlesUtil.createProgram(getVertexSource(), getFragmentSource());
+        initVertexBufferObjects();
         av_Position = GLES30.glGetAttribLocation(mProgram, "av_Position");
         af_Position = GLES30.glGetAttribLocation(mProgram, "af_Position");
         s_Texture = GLES30.glGetUniformLocation(mProgram, "s_Texture");
@@ -225,9 +226,13 @@ public class RecordRenderDrawer extends BaseRenderDrawer implements Runnable{
 
         GLES30.glEnableVertexAttribArray(av_Position);
         GLES30.glEnableVertexAttribArray(af_Position);
-        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
-        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mDisplayTextureBuffer);
-
+//        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
+//        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mDisplayTextureBuffer);
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mVertexBufferId);
+        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, 0, 0);
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mDisplayTextureBufferId);
+        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, 0, 0);
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0);
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureId);
         GLES30.glUniform1i(s_Texture, 0);

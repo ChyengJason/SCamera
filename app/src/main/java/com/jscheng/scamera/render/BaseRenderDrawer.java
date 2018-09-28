@@ -19,17 +19,22 @@ public abstract class BaseRenderDrawer {
     protected int mProgram;
 
     //顶点坐标 Buffer
-    protected FloatBuffer mVertexBuffer;
+    private FloatBuffer mVertexBuffer;
+    protected int mVertexBufferId;
 
     //纹理坐标 Buffer
-    protected FloatBuffer mFrontTextureBuffer;
+    private FloatBuffer mFrontTextureBuffer;
+    protected int mFrontTextureBufferId;
 
     //纹理坐标 Buffer
-    protected FloatBuffer mBackTextureBuffer;
+    private FloatBuffer mBackTextureBuffer;
+    protected int mBackTextureBufferId;
 
-    protected FloatBuffer mDisplayTextureBuffer;
+    private FloatBuffer mDisplayTextureBuffer;
+    protected int mDisplayTextureBufferId;
 
-    protected FloatBuffer mFrameTextureBuffer;
+    private FloatBuffer mFrameTextureBuffer;
+    protected int mFrameTextureBufferId;
 
     protected float vertexData[] = {
             -1f, -1f,// 左下角
@@ -77,11 +82,12 @@ public abstract class BaseRenderDrawer {
     protected final int TextureStride = CoordsPerTextureCount * 4;
 
     public BaseRenderDrawer() {
-        initBuffer();
+
     }
 
     public void create() {
         mProgram = GlesUtil.createProgram(getVertexSource(), getFragmentSource());
+        initVertexBufferObjects();
         onCreated();
     }
 
@@ -103,42 +109,58 @@ public abstract class BaseRenderDrawer {
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
     }
 
-//    protected void bindTexture(int type){
-//        GLES30.glActiveTexture(GLES30.GL_TEXTURE0 + type);
-//        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D , mTextureId);
-//        GLES30.glUniform1i(mHTexture, type);
-//    }
+    protected void initVertexBufferObjects() {
+        int[] vbo = new int[5];
+        GLES30.glGenBuffers(5, vbo, 0);
 
-    protected void initBuffer() {
-        this.mVertexBuffer = ByteBuffer.allocateDirect(vertexData.length * 4)
+        mVertexBuffer = ByteBuffer.allocateDirect(vertexData.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
                 .put(vertexData);
-        this.mVertexBuffer.position(0);
+        mVertexBuffer.position(0);
+        mVertexBufferId = vbo[0];
+        // ARRAY_BUFFER 将使用 Float*Array 而 ELEMENT_ARRAY_BUFFER 必须使用 Uint*Array
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mVertexBufferId);
+        GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, vertexData.length * 4, mVertexBuffer, GLES30.GL_STATIC_DRAW);
 
-        this.mBackTextureBuffer = ByteBuffer.allocateDirect(backTextureData.length * 4)
+
+        mBackTextureBuffer = ByteBuffer.allocateDirect(backTextureData.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
                 .put(backTextureData);
-        this.mBackTextureBuffer.position(0);
+        mBackTextureBuffer.position(0);
+        mBackTextureBufferId = vbo[1];
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mBackTextureBufferId);
+        GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, backTextureData.length * 4, mBackTextureBuffer, GLES30.GL_STATIC_DRAW);
 
-        this.mFrontTextureBuffer = ByteBuffer.allocateDirect(frontTextureData.length * 4)
+        mFrontTextureBuffer = ByteBuffer.allocateDirect(frontTextureData.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
                 .put(frontTextureData);
-        this.mFrontTextureBuffer.position(0);
+        mFrontTextureBuffer.position(0);
+        mFrontTextureBufferId = vbo[2];
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mFrontTextureBufferId);
+        GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, frontTextureData.length * 4, mFrontTextureBuffer, GLES30.GL_STATIC_DRAW);
 
-        this.mDisplayTextureBuffer = ByteBuffer.allocateDirect(displayTextureData.length * 4)
+        mDisplayTextureBuffer = ByteBuffer.allocateDirect(displayTextureData.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
                 .put(displayTextureData);
-        this.mDisplayTextureBuffer.position(0);
+        mDisplayTextureBuffer.position(0);
+        mDisplayTextureBufferId = vbo[3];
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mDisplayTextureBufferId);
+        GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, displayTextureData.length * 4, mDisplayTextureBuffer, GLES30.GL_STATIC_DRAW);
 
-        this.mFrameTextureBuffer = ByteBuffer.allocateDirect(frameBufferData.length * 4)
+        mFrameTextureBuffer = ByteBuffer.allocateDirect(frameBufferData.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
                 .put(frameBufferData);
-        this.mFrameTextureBuffer.position(0);
+        mFrameTextureBuffer.position(0);
+        mFrameTextureBufferId = vbo[4];
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mFrameTextureBufferId);
+        GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, frameBufferData.length * 4, mFrameTextureBuffer, GLES30.GL_STATIC_DRAW);
+
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,0);
     }
 
     protected void useProgram(){
@@ -148,18 +170,6 @@ public abstract class BaseRenderDrawer {
     protected void viewPort(int x, int y, int width, int height) {
         GLES30.glViewport(x, y, width,  height);
     }
-
-//    protected void draw(){
-//        GLES30.glEnableVertexAttribArray(mHPosition);
-//        GLES30.glVertexAttribPointer(mHPosition,2, GLES30.GL_FLOAT, false, 0, mVerBuffer);
-//        GLES30.glEnableVertexAttribArray(mHCoord);
-//        GLES30.glVertexAttribPointer(mHCoord, 2, GLES30.GL_FLOAT, false, 0, mTexBuffer);
-//        GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP,0,);
-//        GLES30.glDisableVertexAttribArray(mHPosition);
-//        GLES30.glDisableVertexAttribArray(mHCoord);
-//    }
-
-
 
     public abstract void setInputTextureId(int textureId);
 

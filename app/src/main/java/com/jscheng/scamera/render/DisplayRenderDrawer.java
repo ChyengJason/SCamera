@@ -28,17 +28,24 @@ public class DisplayRenderDrawer extends BaseRenderDrawer {
     protected void onDraw() {
         GLES30.glEnableVertexAttribArray(av_Position);
         GLES30.glEnableVertexAttribArray(af_Position);
-        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
-        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mDisplayTextureBuffer);
 
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mVertexBufferId);
+        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, 0, 0);
+//        GLES30.glVertexAttribPointer(av_Position, CoordsPerVertexCount, GLES30.GL_FLOAT, false, VertexStride, mVertexBuffer);
+        // 用GPU中的缓冲数据，不再RAM中取数据，所以后2个参数为0
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mDisplayTextureBufferId);
+        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, 0, 0);
+//        GLES30.glVertexAttribPointer(af_Position, CoordsPerTextureCount, GLES30.GL_FLOAT, false, TextureStride, mDisplayTextureBuffer);
+
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0);
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureId);
         GLES30.glUniform1i(s_Texture, 0);
         // 绘制 GLES30.GL_TRIANGLE_STRIP:复用坐标
         GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, VertexCount);
-        GLES30.glDisableVertexAttribArray(av_Position);
-        GLES30.glDisableVertexAttribArray(af_Position);
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
+        GLES30.glDisableVertexAttribArray(af_Position);
+        GLES30.glDisableVertexAttribArray(av_Position);
     }
 
     private void bind2DTexture(int textureId, int textureType) {

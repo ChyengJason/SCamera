@@ -25,17 +25,15 @@ public class EGLHelper {
      * 创建openGL环境
      */
     public void createGL() {
+        createGL(EGL14.EGL_NO_CONTEXT);
+    }
+
+    public void createGL(EGLContext mEglContext) {
         // 设置显示设备
         setDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         // 设置属性
         setConfig();
         // 创建上下文
-        createContext(EGL14.EGL_NO_CONTEXT);
-    }
-
-    public void createGL(EGLContext mEglContext) {
-        setDisplay(EGL14.EGL_DEFAULT_DISPLAY);
-        setConfig();
         createContext(mEglContext);
     }
 
@@ -61,10 +59,10 @@ public class EGLHelper {
                 EGL10.EGL_RED_SIZE, 8,  // 指定 RGB 中的 R 大小（bits）
                 EGL10.EGL_GREEN_SIZE, 8, // 指定 G 大小
                 EGL10.EGL_BLUE_SIZE, 8,  // 指定 B 大小
-                EGL10.EGL_ALPHA_SIZE, 8, // 指定 Alpha 大小，以上四项实际上指定了像素格式
-                EGL10.EGL_DEPTH_SIZE, 8, // 指定深度缓存 (Z Buffer) 大小
-                EGL10.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT, // 指定渲染 api 类别, 如上一小节描述，这里或者是硬编码的 4(EGL14.EGL_OPENGL_ES2_BIT)
-                EGL10.EGL_NONE  // 总是以 EGL14.EGL_NONE 结尾
+                EGL10.EGL_ALPHA_SIZE, 8, // 指定 Alpha 大小
+                EGL10.EGL_DEPTH_SIZE, 8, // 指定深度(Z Buffer) 大小
+                EGL10.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT, // 指定渲染 api 类别,
+                EGL10.EGL_NONE
         };
         setConfig(configAttribs);
     }
