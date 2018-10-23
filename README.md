@@ -1,7 +1,7 @@
 # SCamera 集合OpenGL 和 camera 应用
-1. branch_textureview_preview 分支利用textureview预览camenra、手动对焦、自动对焦
-2. branch_textureview_camera_record 分支仿微信拍照、录像硬编码、播放音视频
-3. branch_glsurface_view 分支利用GLSurfaceView预览camera
-4. branch_record_pbo 分支利用GLSurfaceView预览，离屏渲染FBO、增加水印特效、录制视频
+1. 利用textureview预览camenra、手动对焦、自动对焦
+2. 仿微信拍照
+3. 录像硬编码
+4. 播放音视频频
 
-[详情链接](https://blog.csdn.net/qq_15893929)
+[Camera 仿微信相机 利用 MediaCodec API 从录制 MP4 到解析播放](https://blog.csdn.net/qq_15893929/article/details/82706755)
